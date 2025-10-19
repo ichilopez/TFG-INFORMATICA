@@ -1,0 +1,21 @@
+train:
+  batch_size: 64
+  epochs: 10
+  learning_rate: 0.001
+  device: "cuda"
+
+data:
+  
+  train_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train.csv"
+  test_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test.csv"
+  img_dir: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/jpeg"
+  study_type: "segmentation"  # o "classification"
+  num_workers: 4
+
+model:
+  type: "cnn"
+  num_classes: 3
+
+save:
+  output_dir: "results/"
+  model_name: "cnn_race_classifier.pth"
