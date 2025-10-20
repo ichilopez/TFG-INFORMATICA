@@ -2,7 +2,7 @@
 from torch.utils.data import Dataset
 from PIL import Image
 
-class StudyImageDataset(Dataset):
+class ImageDataset(Dataset):
     def __init__(self, data_paths, transform=None):
         self.data_paths = data_paths
         self.transform = transform

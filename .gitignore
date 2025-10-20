@@ -1,0 +1,73 @@
+# ----------------------------
+# Archivos de Python
+# ----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Archivos creados por IDEs
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.vscode/
+.idea/
+
+# ----------------------------
+# Entornos virtuales
+# ----------------------------
+env/
+venv/
+ENV/
+VENV/
+.venv/
+
+# ----------------------------
+# Archivos de logs y bases de datos
+# ----------------------------
+*.log
+*.sqlite3
+
+# ----------------------------
+# Archivos de datasets y datos pesados
+# ----------------------------
+*.csv
+*.h5
+*.hdf5
+*.npz
+data/
+datasets/
+
+# ----------------------------
+# Modelos guardados / checkpoints
+# ----------------------------
+*.pt
+*.pth
+checkpoints/
+models/
+saved_models/
+
+# ----------------------------
+# Salidas temporales
+# ----------------------------
+*.out
+*.tmp
+*.bak
+*.swp
+
+# ----------------------------
+# Jupyter Notebook
+# ----------------------------
+.ipynb_checkpoints/
+*.ipynb
+
+# ----------------------------
+# MacOS
+# ----------------------------
+.DS_Store
+
+# ----------------------------
+# Windows
+# ----------------------------
+Thumbs.db
