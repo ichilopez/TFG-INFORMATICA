@@ -45,7 +45,6 @@ datasets/
 *.pt
 *.pth
 checkpoints/
-models/
 saved_models/
 
 # ----------------------------
@@ -71,3 +70,4 @@ saved_models/
 # Windows
 # ----------------------------
 Thumbs.db
+results/
