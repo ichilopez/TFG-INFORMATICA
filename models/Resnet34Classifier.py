@@ -3,7 +3,7 @@ from models import Classifier
 from torchvision import models
 import torch.nn as nn
 
-class ResNet34Classification(Classifier):
+class ResNet34Classifier(Classifier):
     def __init__(self, num_classes: int):
         super().__init__() 
         self.model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V2)

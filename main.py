@@ -19,9 +19,8 @@ def main(config_path="configs/config.yaml"):
     model = getModel(cfg["save"]["model_name"])
     print("Training...")
     print("Evaluating...")
-    # model.train_model(model, train_dataLoader, device, cfg["train"]["epochs"], cfg["train"]["learning_rate"],cfg["data"]["study_type"])
-    # model.evaluate_model(model, test_dataLoader, device,cfg["data"]["study_type"])
-
+    # model.train(model, train_dataLoader, device, cfg["train"]["epochs"], cfg["train"]["learning_rate"],cfg["data"]["study_type"])
+    # model.evaluate(model, test_dataLoader, device,cfg["data"]["study_type"])
     os.makedirs(cfg["save"]["output_dir"], exist_ok=True)
     torch.save(model.state_dict(), os.path.join(cfg["save"]["output_dir"], cfg["save"]["model_name"]))
     print("Modelo guardado exitosamente")

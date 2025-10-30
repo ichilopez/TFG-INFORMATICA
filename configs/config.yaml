@@ -9,7 +9,7 @@ data:
   train_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train.csv"
   test_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test.csv"
   img_dir: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/jpeg"
-  study_type: "classificationStudy"  # o "classification"
+  study_type: "segmentationStudy"  # o "classificationStudy", "segmentationStudy"
   num_workers: 4
 
 model:
@@ -18,4 +18,4 @@ model:
 
 save:
   output_dir: "results/"
-  model_name: "resnet34"
+  model_name: "resnet34" # mobilenetv2,efficientnetb0

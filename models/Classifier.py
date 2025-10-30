@@ -11,13 +11,6 @@ class Classifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, x):
-        return self.model(x)
-
-    @abstractmethod
-    def adjustModel(self):
-        pass
-
     def train(self, trainloader, epochs, learning_rate, device="cuda"):
         self.to(device)
         criterion = nn.CrossEntropyLoss()
@@ -33,7 +26,7 @@ class Classifier(nn.Module):
                 outputs = self(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
-                optimizer.step()
+                optimizer.step() #Se modifica su valor en memoria cuando llamamos a optimizer.step()
                 running_loss += loss.item()
             avg_loss = running_loss / len(trainloader)
             print(f"Epoch [{epoch}/{epochs}], Loss: {avg_loss:.4f}")

@@ -1,24 +1,37 @@
 from torch.utils.data import Dataset
 from PIL import Image
+import torch
 
-class SegmentationDataSet(Dataset):
-    def __init__(self, input_paths, target_paths, transform=None):
-        assert len(input_paths) == len(target_paths), "Input and target lists must be same length"
-        self.input_paths = input_paths
-        self.target_paths = target_paths
-        self.transform_input = transform
-        self.transform_target = transform
+class SegmentationDataset(Dataset):
+    def __init__(self, data_info, transform=None):
+        self.data_info = data_info
+        self.transform = transform
+
 
     def __len__(self):
-        return len(self.input_paths)
+        return len(self.data_info)
 
     def __getitem__(self, idx):
-        input_img = Image.open(self.input_paths[idx]).convert("L") 
-        target_img = Image.open(self.target_paths[idx]).convert("L")
+        info = self.data_info[idx]
+        img = Image.open(info['file_path_image']).convert("L")  
 
-        if self.transform_input:
-            input_img = self.transform_input(input_img)
-        if self.transform_target:
-            target_img = self.transform_target(target_img)
+        orig_w, orig_h = img.size
+        
+        if self.transform:
+            img = self.transform(img)
+        
+        _, new_h, new_w = img.shape
 
-        return input_img, target_img
+        # Extraer coordenadas originales
+        x_min = float(info['x_min'])
+        y_min = float(info['y_min'])
+        x_max = float(info['x_max'])
+        y_max = float(info['y_max'])
+        x_min = x_min * new_w / orig_w
+        x_max = x_max * new_w / orig_w
+        y_min = y_min * new_h / orig_h
+        y_max = y_max * new_h / orig_h
+
+        coords = torch.tensor([x_min, y_min, x_max, y_max], dtype=torch.float32)
+
+        return img, coords
