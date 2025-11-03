@@ -1,5 +1,4 @@
 from utils.ImageManager import ImageManager
-import os
 import pandas as pd
 from torch.utils.data import DataLoader
 from utils.classification.ClassificationDataSet import ClassificationDataSet

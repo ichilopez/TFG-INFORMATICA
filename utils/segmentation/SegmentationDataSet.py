@@ -1,37 +1,37 @@
 from torch.utils.data import Dataset
 from PIL import Image
 import torch
+import numpy as np
 
 class SegmentationDataset(Dataset):
-    def __init__(self, data_info, transform=None):
+    def __init__(self, data_info, transform):
+        """
+        Dataset para detección de lesiones en mamografías (YOLO).
+        Args:
+            data_info: lista de diccionarios con:
+                - file_path_image
+                - x_min, y_min, x_max, y_max
+            transform: albumentations.Compose con bbox_params='pascal_voc'
+        """
         self.data_info = data_info
         self.transform = transform
-
 
     def __len__(self):
         return len(self.data_info)
 
     def __getitem__(self, idx):
         info = self.data_info[idx]
-        img = Image.open(info['file_path_image']).convert("L")  
+        img = np.array(Image.open(info['file_path_image']).convert("L"))
+        img = np.stack([img]*3, axis=-1)
+        bbox = [float(info['x_min']), float(info['y_min']),
+                float(info['x_max']), float(info['y_max'])]
+        bboxes = [bbox]
+        labels = [0]  
 
-        orig_w, orig_h = img.size
-        
-        if self.transform:
-            img = self.transform(img)
-        
-        _, new_h, new_w = img.shape
+        transformed = self.transform(image=img, bboxes=bboxes, labels=labels)
+        img = transformed['image']
+        bboxes = transformed['bboxes']
 
-        # Extraer coordenadas originales
-        x_min = float(info['x_min'])
-        y_min = float(info['y_min'])
-        x_max = float(info['x_max'])
-        y_max = float(info['y_max'])
-        x_min = x_min * new_w / orig_w
-        x_max = x_max * new_w / orig_w
-        y_min = y_min * new_h / orig_h
-        y_max = y_max * new_h / orig_h
-
-        coords = torch.tensor([x_min, y_min, x_max, y_max], dtype=torch.float32)
+        coords = torch.tensor(bboxes[0], dtype=torch.float32)
 
         return img, coords

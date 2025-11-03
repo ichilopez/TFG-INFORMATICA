@@ -1,13 +1,10 @@
-from abc import abstractmethod
-import torch.nn as nn
-class Model(nn.Module):
 
-    from abc import abstractmethod
-import torch
 import torch.nn as nn
 import torch.optim as optim
+from  models.Model import Model
+import torch
 
-class Classifier(nn.Module):
+class Classifier(Model):
     def __init__(self):
         super().__init__()
 
@@ -26,7 +23,7 @@ class Classifier(nn.Module):
                 outputs = self(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
-                optimizer.step() #Se modifica su valor en memoria cuando llamamos a optimizer.step()
+                optimizer.step() 
                 running_loss += loss.item()
             avg_loss = running_loss / len(trainloader)
             print(f"Epoch [{epoch}/{epochs}], Loss: {avg_loss:.4f}")
@@ -56,4 +53,14 @@ class Classifier(nn.Module):
 
     def forward(self,x):
         return self.model(x)
+    
+    def predict(self, inputs, device="cuda"):
+     self.eval()
+     self.to(device)
+     inputs = inputs.to(device)
+     with torch.no_grad():  
+        outputs = self(inputs)  
+        _, predicted = torch.max(outputs, 1)  
+     return predicted
+
  

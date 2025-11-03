@@ -18,4 +18,4 @@ model:
 
 save:
   output_dir: "results/"
-  model_name: "resnet34" # mobilenetv2,efficientnetb0
+  model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet34
