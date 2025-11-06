@@ -7,7 +7,7 @@ path_mass_test = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv
 path_mass_train = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train_set.csv'
 
 class ClassificationImageManager(ImageManager):
-    def getDataLoaders(self, batch_size, num_workers, train_transform=None, test_transform=None):
+    def getDataLoaders(self, batch_size, num_workers,model_name,train_transform=None, test_transform=None):
         train_data = pd.read_csv(path_mass_train)
         test_data = pd.read_csv(path_mass_test)
 

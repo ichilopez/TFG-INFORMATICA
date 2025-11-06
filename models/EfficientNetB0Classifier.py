@@ -1,17 +1,31 @@
-from models import Classifier
+from models.Classifier import Classifier
 from torchvision import models
+import torch
 import torch.nn as nn
+import os
 
 class EfficientNetB0Classifier(Classifier):
-    def __init__(self, num_classes: int):
+    def __init__(self, num_classes=2, model_path: str = None):
         super().__init__()
-        # Cargar EfficientNet-B0 preentrenado en ImageNet
         self.model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1)
         
-        # Congelar todas las capas
         for param in self.model.parameters():
             param.requires_grad = False
         
-        # Reemplazar la capa final (clasificador)
         in_features = self.model.classifier[1].in_features
         self.model.classifier[1] = nn.Linear(in_features, num_classes)
+
+        if model_path:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            state_dict = torch.load(model_path, map_location=device)
+            self.model.load_state_dict(state_dict)
+
+    def save(self, path="weights/efficientnetb0.pt"):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        try:
+            self.model.save(path)
+            print(f"✅ Modelo YOLO guardado correctamente en: {path}")
+        except AttributeError:
+            torch.save(self.model.model.state_dict(), path)
+            print(f"✅ Pesos guardados manualmente en: {path}")
+

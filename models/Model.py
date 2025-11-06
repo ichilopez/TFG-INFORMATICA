@@ -16,4 +16,8 @@ class Model(nn.Module):
     @abstractmethod
     def predict(self, image_paths):
         pass
+
+    @abstractmethod
+    def save(self, path):
+        pass
  

@@ -13,9 +13,11 @@ data:
   num_workers: 4
 
 model:
-  type: "cnn"
-  num_classes: 3
+   model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_path: null
+   num_classes : 2
 
 save:
-  output_dir: "results/"
-  model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet34
+  output_dir: null
+ 
+  model_input_path: null

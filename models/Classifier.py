@@ -4,6 +4,7 @@ import torch.optim as optim
 from  models.Model import Model
 import torch
 
+
 class Classifier(Model):
     def __init__(self):
         super().__init__()
@@ -62,5 +63,7 @@ class Classifier(Model):
         outputs = self(inputs)  
         _, predicted = torch.max(outputs, 1)  
      return predicted
+    
+    
 
  
