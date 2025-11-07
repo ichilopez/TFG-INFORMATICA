@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import segmentation_models_pytorch as smp
 import os
@@ -7,7 +6,8 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 from models.Model import Model
-
+from torchvision.ops import masks_to_boxes 
+import pandas as pd
 
 class UNetResNet34Segmenter(Model):
     def __init__(self, model_path=None, device="cuda"):
@@ -60,56 +60,131 @@ class UNetResNet34Segmenter(Model):
 
         print("✅ Entrenamiento finalizado (solo decoder entrenado).")
 
+    def evaluate(self, dataloader, output_csv, metrics_path, threshold=0.5):
+        """
+        Evalúa el modelo UNet y guarda:
+        - output_csv: resultados detallados por imagen
+        - metrics_path: métricas globales promedio del conjunto de test
+        """
+        self.eval()
+        self.to(self.device)
 
-    def evaluate(self, testloader, device="cuda"):
-        self.model.eval()
-        dice_score = 0.0
+        all_results = []
+        metrics_global = {
+            "iou": [], "dice": [],
+            "precision": [], "recall": [],
+            "specificity": [], "accuracy": [], "f1": []
+        }
+
         with torch.no_grad():
-            for batch in tqdm(testloader, desc="Evaluando"):
-                images = batch["image"].to(device)
-                masks = batch["mask"].to(device)
+            for batch in tqdm(dataloader, desc="Evaluando UNet"):
+                imgs = batch["image"].to(self.device)
+                true_masks = batch["mask"].to(self.device)
+                image_paths = batch["image_path"]
 
-                outputs = torch.sigmoid(self.model(images))
-                preds = (outputs > 0.5).float()
+                preds = torch.sigmoid(self(imgs))
+                pred_bin = (preds > threshold).to(torch.uint8)
+                true_bin = (true_masks > 0.5).to(torch.uint8)
 
-                intersection = (preds * masks).sum()
-                union = preds.sum() + masks.sum()
-                dice_score += (2. * intersection / (union + 1e-6)).item()
+                for i in range(len(image_paths)):
+                    pred_np = pred_bin[i].cpu().numpy().squeeze()
+                    true_np = true_bin[i].cpu().numpy().squeeze()
 
-        dice_score /= len(testloader)
-        print(f"✅ Dice score promedio: {dice_score:.4f}")
-        return dice_score
+                    # --- Métricas píxel a píxel ---
+                    TP = np.logical_and(pred_np == 1, true_np == 1).sum()
+                    TN = np.logical_and(pred_np == 0, true_np == 0).sum()
+                    FP = np.logical_and(pred_np == 1, true_np == 0).sum()
+                    FN = np.logical_and(pred_np == 0, true_np == 1).sum()
 
+                    precision = TP / (TP + FP + 1e-8)
+                    recall = TP / (TP + FN + 1e-8)
+                    specificity = TN / (TN + FP + 1e-8)
+                    accuracy = (TP + TN) / (TP + TN + FP + FN + 1e-8)
+                    f1 = (2 * precision * recall) / (precision + recall + 1e-8)
 
+                    # --- IoU y Dice ---
+                    intersection = TP
+                    union = TP + FP + FN
+                    iou = intersection / (union + 1e-8)
+                    dice = (2 * TP) / (2 * TP + FP + FN + 1e-8)
+
+                    # Guardar en listas globales
+                    for k, v in zip(
+                        ["iou", "dice", "precision", "recall", "specificity", "accuracy", "f1"],
+                        [iou, dice, precision, recall, specificity, accuracy, f1],
+                    ):
+                        metrics_global[k].append(v)
+
+                    # --- Bounding boxes ---
+                    boxes_pred = masks_to_boxes(pred_bin[i]) if pred_bin[i].sum() > 0 else torch.empty((0, 4))
+                    boxes_true = masks_to_boxes(true_bin[i]) if true_bin[i].sum() > 0 else torch.empty((0, 4))
+
+                    all_results.append({
+                        "image_path": image_paths[i],
+                        "bbox_true": boxes_true.cpu().numpy().tolist() if boxes_true.numel() > 0 else [],
+                        "bbox_pred": boxes_pred.cpu().numpy().tolist() if boxes_pred.numel() > 0 else [],
+                        "iou": float(iou),
+                        "dice": float(dice),
+                        "precision": float(precision),
+                        "recall": float(recall),
+                        "specificity": float(specificity),
+                        "accuracy": float(accuracy),
+                        "f1": float(f1)
+                    })
+
+        # --- Guardar CSV detallado ---
+        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+        df = pd.DataFrame(all_results)
+        df.to_csv(output_csv, index=False)
+
+        # --- Métricas globales (promedio) ---
+        mean_metrics = {k: np.mean(v) for k, v in metrics_global.items()}
+        os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+        pd.DataFrame([mean_metrics]).to_csv(metrics_path, index=False)
+
+        print(f"✅ Resultados detallados guardados en: {output_csv}")
+        print(f"📊 Métricas globales guardadas en: {metrics_path}")
+        print(
+            f"🔹 IoU={mean_metrics['iou']:.4f}, Dice={mean_metrics['dice']:.4f}, "
+            f"Precision={mean_metrics['precision']:.4f}, Recall={mean_metrics['recall']:.4f}, "
+            f"F1={mean_metrics['f1']:.4f}, Accuracy={mean_metrics['accuracy']:.4f}"
+        )
+
+        return mean_metrics, df
+    
     def predict(self, image_paths, threshold=0.5):
-        self.model.eval()
-        results = []
+        """
+        Genera predicciones binarizadas y bounding boxes para cada imagen.
+        Retorna lista de diccionarios:
+        {
+            'image_path': ...,
+            'mask_pred': ...,
+            'bbox_pred': ...
+        }
+        """
+        self.eval()
+        self.to(self.device)
+        predictions = []
 
-        for path in image_paths:
-            img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-            img_resized = cv2.resize(img, (256, 256))
-            tensor = torch.tensor(img_resized / 255.0).unsqueeze(0).unsqueeze(0).float().to(self.device)
+        with torch.no_grad():
+            for path in tqdm(image_paths, desc="Prediciendo UNet"):
+                img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                img = cv2.resize(img, (256, 256))
+                img = np.stack([img] * 3, axis=-1)
+                tensor = torch.tensor(img / 255.0, dtype=torch.float32).permute(2,0,1).unsqueeze(0).to(self.device)
 
-            with torch.no_grad():
-                pred_mask = torch.sigmoid(self.model(tensor))[0, 0].cpu().numpy()
-                mask_bin = (pred_mask > threshold).astype(np.uint8)
+                pred_mask = torch.sigmoid(self.model(tensor))[0,0].cpu()
+                pred_bin = (pred_mask > threshold).to(torch.uint8)
 
-            contours, _ = cv2.findContours(mask_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            bboxes = []
-            for c in contours:
-                x, y, w, h = cv2.boundingRect(c)
-                bboxes.append({
-                    "bbox": [x, y, x + w, y + h],
-                    "score": float(pred_mask[y:y+h, x:x+w].mean())
+                boxes_pred = masks_to_boxes(pred_bin) if pred_bin.sum() > 0 else torch.empty((0,4))
+
+                predictions.append({
+                    "image_path": path,
+                    "mask_pred": pred_bin.numpy(),
+                    "bbox_pred": boxes_pred.cpu().numpy().tolist() if boxes_pred.numel() > 0 else []
                 })
 
-            results.append({
-                "image_path": path,
-                "bboxes": bboxes,
-                "mask": mask_bin
-            })
-
-        return results
+        return predictions
 
 
     def save(self, path="weights/unet_resnet34_transfer.pth"):

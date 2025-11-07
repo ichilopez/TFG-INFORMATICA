@@ -3,13 +3,32 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from utils.classification.ClassificationDataSet import ClassificationDataSet
 import matplotlib.pyplot as plt
+from torchvision import transforms
 path_mass_test = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test_set.csv'
 path_mass_train = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train_set.csv'
 
 class ClassificationImageManager(ImageManager):
-    def getDataLoaders(self, batch_size, num_workers,model_name,train_transform=None, test_transform=None):
+    def getDataLoaders(self, batch_size, num_workers,model_name):
         train_data = pd.read_csv(path_mass_train)
         test_data = pd.read_csv(path_mass_test)
+
+        train_transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.Grayscale(num_output_channels=3),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(5),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.Grayscale(num_output_channels=3),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
 
         train_info = self.__getPathsAndLabels(train_data)
         test_info = self.__getPathsAndLabels(test_data)

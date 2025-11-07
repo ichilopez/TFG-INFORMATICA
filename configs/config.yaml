@@ -13,7 +13,7 @@ data:
   num_workers: 4
 
 model:
-   model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "unetresnet34" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
    model_path: null
    num_classes : 2
 
