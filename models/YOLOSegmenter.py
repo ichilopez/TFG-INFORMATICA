@@ -5,23 +5,76 @@ from ultralytics import YOLO
 from torchvision.ops import box_iou
 from models.Model import Model
 import numpy as np
+import yaml
+import tempfile
+from PIL import Image
 
 class YOLOSegmenter(Model):
     def __init__(self, model_path=None):
         super().__init__()
         self.model = YOLO(model_path if model_path else 'yolov8n.pt')
 
-    def train(self, trainloader, epochs, learning_rate, device="cuda", freeze_layers=10):
-        import yaml
-        import tempfile
+
+    def _create_yolo_dataset_structure(self, data_info, base_dir, subset="train"):
+     images_dir = os.path.join(base_dir, "images", subset)
+     labels_dir = os.path.join(base_dir, "labels", subset)
+
+     os.makedirs(images_dir, exist_ok=True)
+     os.makedirs(labels_dir, exist_ok=True)
+
+     for sample in data_info:
+        img_path = sample["file_path_image"]
+        img_name = os.path.basename(img_path)
+        new_img_path = os.path.join(images_dir, img_name)
+
+        if not os.path.exists(new_img_path):
+            try:
+                os.symlink(os.path.abspath(img_path), new_img_path)
+            except OSError:
+                from shutil import copy2
+                copy2(img_path, new_img_path)
+
+        label_name = os.path.splitext(img_name)[0] + ".txt"
+        label_path = os.path.join(labels_dir, label_name)
+
+        if not os.path.exists(label_path):
+            img = Image.open(img_path)
+            w, h = img.size
+            with open(label_path, "w") as f:
+                for bbox in sample["bboxes"]:
+                    x_min, y_min, x_max, y_max = bbox
+                    x_center = ((x_min + x_max) / 2) / w
+                    y_center = ((y_min + y_max) / 2) / h
+                    width = (x_max - x_min) / w
+                    height = (y_max - y_min) / h
+                    f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
+
+     return images_dir, labels_dir
+
+  
+    def train(self, trainloader, epochs=50, learning_rate=1e-3, device="cuda", freeze_layers=10):
+        
         with tempfile.TemporaryDirectory() as tmpdir:
-            train_images = [item['file_path_image'] for item in trainloader.dataset.data_info]
-            val_images = train_images
+            print(f"📁 Creando dataset temporal para YOLO en: {tmpdir}")
+
+            train_images_dir, _ = self._create_yolo_dataset_structure(
+                trainloader.dataset.data_info, tmpdir, subset="train"
+            )
+
+            val_images_dir = train_images_dir
+
             data_yaml_path = os.path.join(tmpdir, 'dataset.yaml')
-            data_dict = {'train': train_images, 'val': val_images, 'nc': 1, 'names': ['lesion']}
+            data_dict = {
+                'train': train_images_dir,
+                'val': val_images_dir,
+                'nc': 1,
+                'names': ['lesion']
+            }
             with open(data_yaml_path, 'w') as f:
                 yaml.dump(data_dict, f)
 
+            # Entrenar YOLO
+            print("🚀 Iniciando entrenamiento YOLOv8 ...")
             self.model.train(
                 data=data_yaml_path,
                 epochs=epochs,
@@ -29,13 +82,12 @@ class YOLOSegmenter(Model):
                 batch=8,
                 freeze=freeze_layers,
                 device=device,
-                lr0=learning_rate
+                lr0=learning_rate,
+                patience = 10
             )
 
+
     def predict(self, image_paths, device="cuda", conf_threshold=0.25):
-        """
-        Realiza predicciones y devuelve bboxes en el mismo formato que evaluate.
-        """
         self.model.to(device)
         self.model.eval()
         results_all = []
@@ -57,9 +109,6 @@ class YOLOSegmenter(Model):
 
     def evaluate(self, testloader, results_path="results/results_yolo.csv",
                  metrics_path="results/metrics_yolo.csv", device="cuda"):
-        """
-        Evalúa el modelo YOLO usando predict() y calcula métricas comparables con UNet.
-        """
         self.model.to(device)
         self.model.eval()
 
@@ -74,14 +123,12 @@ class YOLOSegmenter(Model):
                                        float(sample['x_max']), float(sample['y_max'])]], device=device)
             boxes_pred = pred["boxes_pred"]
 
-            # Calcular IoU máximo
             if bbox_true.numel() > 0 and boxes_pred.numel() > 0:
                 ious = box_iou(bbox_true, boxes_pred)
                 iou = ious.max().item()
             else:
                 iou = 0.0
 
-            # Métricas derivadas
             dice = (2 * iou) / (iou + 1e-6)
             precision = iou
             recall = iou
@@ -89,7 +136,6 @@ class YOLOSegmenter(Model):
             accuracy = iou
             f1 = dice
 
-            # Guardar métricas por imagen
             metrics_global["iou"].append(iou)
             metrics_global["dice"].append(dice)
             metrics_global["precision"].append(precision)
@@ -98,7 +144,6 @@ class YOLOSegmenter(Model):
             metrics_global["accuracy"].append(accuracy)
             metrics_global["f1"].append(f1)
 
-            # Guardar resultados individuales
             all_results.append({
                 "image_path": sample['file_path_image'],
                 "bbox_true": bbox_true.cpu().numpy().tolist() if bbox_true.numel() > 0 else [],
@@ -112,12 +157,10 @@ class YOLOSegmenter(Model):
                 "f1": float(f1)
             })
 
-        # Guardar CSV detallado
         os.makedirs(os.path.dirname(results_path), exist_ok=True)
         df_results = pd.DataFrame(all_results)
         df_results.to_csv(results_path, index=False)
 
-        # Métricas globales promedio
         mean_metrics = {f"{k}_mean": np.mean(v) for k, v in metrics_global.items()}
         os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
         pd.DataFrame([mean_metrics]).to_csv(metrics_path, index=False)

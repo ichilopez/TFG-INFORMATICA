@@ -3,9 +3,9 @@ from PIL import Image
 
 class ClassificationDataSet(Dataset):
     def __init__(self, data_info, transform=None):
-
         self.data_info = data_info
         self.transform = transform
+        self.label_map = {"BENIGN": 0, "MALIGNANT": 1}
 
     def __len__(self):
         return len(self.data_info)
@@ -13,11 +13,12 @@ class ClassificationDataSet(Dataset):
     def __getitem__(self, idx):
         info = self.data_info[idx]
 
-        img = Image.open(info['file_path_image']).convert("L")  # escala de grises
+        img = Image.open(info['file_path_image']).convert("L")  
 
         if self.transform:
             img = self.transform(img)
 
-        label = info['label']
+        label_str = str(info['label']).strip().upper()
+        label = self.label_map.get(label_str, -1)
 
         return img, label

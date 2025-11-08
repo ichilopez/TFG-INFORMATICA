@@ -10,7 +10,7 @@ class Model(nn.Module):
         pass
     
     @abstractmethod
-    def evaluate(self, testloader, device="cuda"):
+    def evaluate(self, testloader,metrics_path, device, output_path):
        pass
 
     @abstractmethod

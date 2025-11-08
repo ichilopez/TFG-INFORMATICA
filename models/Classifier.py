@@ -11,33 +11,45 @@ class Classifier(Model):
         super().__init__()
 
     def train(self, trainloader, epochs, learning_rate, device="cuda"):
-        self.to(device)
+        self.model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
-                               lr=learning_rate)
+        optimizer = optim.Adam(
+            filter(lambda p: p.requires_grad, self.parameters()),
+            lr=learning_rate
+        )
+
         for epoch in range(1, epochs + 1):
-            self.train() 
+            self.model.train()
             running_loss = 0.0
+
             for batch_idx, (inputs, labels) in enumerate(trainloader):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+
                 optimizer.zero_grad()
                 outputs = self(inputs)
                 loss = criterion(outputs, labels)
                 loss.backward()
-                optimizer.step() 
+                optimizer.step()
+
                 running_loss += loss.item()
+
             avg_loss = running_loss / len(trainloader)
             print(f"Epoch [{epoch}/{epochs}], Loss: {avg_loss:.4f}")
 
-    def evaluate(self, testloader, device="cuda", output_path="results/evaluation_results.csv"):
-        self.eval()
-        self.to(device)
-        criterion = nn.CrossEntropyLoss()
+    def evaluate(self, testloader, metrics_path="results/metrics.csv",
+                 device="cuda", output_path="results/evaluation_results.csv"):
+
+        self.model.to(device)
+        self.model.eval()
 
         all_results = []
         running_loss = 0.0
         y_true_all, y_pred_all = [], []
+
+        criterion = nn.CrossEntropyLoss()
+
+        label_map_inv = {0: "BENIGN", 1: "MALIGNANT"}
 
         with torch.no_grad():
             for batch in testloader:
@@ -50,23 +62,20 @@ class Classifier(Model):
 
                 inputs, labels = inputs.to(device), labels.to(device)
 
-                outputs = self(inputs)
+                outputs = self.model(inputs)
                 loss = criterion(outputs, labels)
                 running_loss += loss.item()
 
-                probs = torch.softmax(outputs, dim=1)
-                confs, predicted = torch.max(probs, 1)
+                predicted = torch.argmax(outputs, dim=1)
 
                 y_true_all.extend(labels.cpu().numpy())
                 y_pred_all.extend(predicted.cpu().numpy())
 
-                # Guardar resultados individuales
-                for img_path, true, pred, score in zip(image_paths, labels.cpu().numpy(), predicted.cpu().numpy(), confs.cpu().numpy()):
+                for img_path, true, pred in zip(image_paths, labels.cpu().numpy(), predicted.cpu().numpy()):
                     all_results.append({
                         "image file path": img_path,
-                        "true label": int(true),
-                        "predicted label": int(pred),
-                        "pred_score": float(score)
+                        "true label": label_map_inv.get(int(true),"UNKNOWN"),
+                        "predicted label": label_map_inv.get(int(pred),"UNKNOWN")
                     })
 
         # --- Métricas globales ---
@@ -83,7 +92,6 @@ class Classifier(Model):
         df_results.to_csv(output_path, index=False)
 
         # Guardar métricas globales
-        metrics_path = output_path.replace(".csv", "_metrics.csv")
         metrics_dict = {
             "avg_loss": avg_loss,
             "accuracy": accuracy,
@@ -91,6 +99,7 @@ class Classifier(Model):
             "recall": recall,
             "f1": f1
         }
+        os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
         pd.DataFrame([metrics_dict]).to_csv(metrics_path, index=False)
 
         print(f"✅ Resultados guardados en: {output_path}")

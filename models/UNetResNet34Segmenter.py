@@ -61,11 +61,6 @@ class UNetResNet34Segmenter(Model):
         print("✅ Entrenamiento finalizado (solo decoder entrenado).")
 
     def evaluate(self, dataloader, output_csv, metrics_path, threshold=0.5):
-        """
-        Evalúa el modelo UNet y guarda:
-        - output_csv: resultados detallados por imagen
-        - metrics_path: métricas globales promedio del conjunto de test
-        """
         self.eval()
         self.to(self.device)
 
@@ -153,15 +148,6 @@ class UNetResNet34Segmenter(Model):
         return mean_metrics, df
     
     def predict(self, image_paths, threshold=0.5):
-        """
-        Genera predicciones binarizadas y bounding boxes para cada imagen.
-        Retorna lista de diccionarios:
-        {
-            'image_path': ...,
-            'mask_pred': ...,
-            'bbox_pred': ...
-        }
-        """
         self.eval()
         self.to(self.device)
         predictions = []

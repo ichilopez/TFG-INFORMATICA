@@ -1,7 +1,6 @@
 
 
 from utils.segmentation.SegmentationImageManager import SegmentationImageManager
-from albumentations.pytorch.transforms import ToTensorV2
 from utils.classification.ClassificationImageManager import ClassificationImageManager
 
 def getDataLoaders(study_type, modelName, batch_size, num_workers):

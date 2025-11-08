@@ -22,8 +22,8 @@ class SegmentationImageManager(ImageManager):
         test_data = pd.read_csv(path_mass_test)
 
         if model_name == "yolo":
-            train_info = self.__getImageAndROIMaskPaths(train_data)
-            test_info = self.__getImageAndROIMaskPaths(test_data)
+            train_info = self.__getPathsAndBBoxes(train_data)
+            test_info = self.__getPathsAndBBoxes(test_data)
 
             train_transform = A.Compose([
              A.Resize(640, 640),
@@ -51,8 +51,8 @@ class SegmentationImageManager(ImageManager):
 
 
         elif model_name == "unetresnet34":
-          train_info = self.__getPathsAndBBoxes(train_data)
-          test_info  = self.__getPathsAndBBoxes(test_data)
+          train_info = self.__getImageAndROIMaskPaths(train_data)
+          test_info  = self.__getImageAndROIMaskPaths(test_data)
 
           train_transform = A.Compose([
            A.Resize(256, 256),

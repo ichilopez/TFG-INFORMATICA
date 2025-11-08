@@ -3,10 +3,6 @@ from PIL import Image
 import numpy as np
 
 class YoloDataset(Dataset):
-    """
-    Dataset para modelos YOLO — devuelve imagen y bounding boxes.
-    Las transformaciones de Albumentations ajustan automáticamente las bboxes.
-    """
     def __init__(self, data_info, transform=None):
         self.data_info = data_info
         self.transform = transform
