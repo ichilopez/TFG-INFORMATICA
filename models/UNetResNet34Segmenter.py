@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 from models.Model import Model
-from torchvision.ops import masks_to_boxes 
+from torchvision.ops import masks_to_boxes
 import pandas as pd
 
 class UNetResNet34Segmenter(Model):
@@ -16,7 +16,7 @@ class UNetResNet34Segmenter(Model):
 
         self.model = smp.Unet(
             encoder_name="resnet34",
-            encoder_weights="imagenet", 
+            encoder_weights="imagenet",
             in_channels=3,
             classes=1,
             activation=None
@@ -34,17 +34,25 @@ class UNetResNet34Segmenter(Model):
             print("ℹ️ Modelo inicializado con pesos preentrenados (ImageNet).")
 
 
-    def train(self, trainloader, epochs, learning_rate, device="cuda"):
-        self.model.train()
+    def train(self, trainloader, validation_loader, epochs, learning_rate,
+              patience=7, min_epochs=10, delta=1e-3, device="cuda"):
+
+        self.model.to(device)
         criterion = smp.losses.DiceLoss(mode='binary')
         optimizer = optim.Adam(
-            filter(lambda p: p.requires_grad, self.model.parameters()),  # solo entrena el decoder
+            filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=learning_rate
         )
 
-        for epoch in range(epochs):
+        best_val_loss = float("inf")
+        epochs_no_improve = 0
+
+        print(f"🚀 Entrenando durante {epochs} épocas con early stopping (patience={patience})...\n")
+
+        for epoch in range(1, epochs + 1):
+            self.model.train()
             running_loss = 0.0
-            for batch in tqdm(trainloader, desc=f"Época {epoch+1}/{epochs}"):
+            for batch in tqdm(trainloader, desc=f"Época {epoch}/{epochs}"):
                 images = batch["image"].to(device)
                 masks = batch["mask"].to(device)
 
@@ -56,7 +64,32 @@ class UNetResNet34Segmenter(Model):
 
                 running_loss += loss.item()
 
-            print(f"📉 Epoch [{epoch+1}/{epochs}] - Loss: {running_loss / len(trainloader):.4f}")
+            avg_train_loss = running_loss / len(trainloader)
+            self.model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for batch in validation_loader:
+                    images = batch["image"].to(device)
+                    masks = batch["mask"].to(device)
+                    outputs = self.model(images)
+                    loss = criterion(outputs, masks)
+                    val_loss += loss.item()
+
+            avg_val_loss = val_loss / len(validation_loader)
+
+            print(f"📉 Epoch [{epoch}/{epochs}] | "
+                  f"Train Loss: {avg_train_loss:.4f} | "
+                  f"Val Loss: {avg_val_loss:.4f}")
+            if avg_val_loss + delta < best_val_loss:
+                best_val_loss = avg_val_loss
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+
+            if epoch >= min_epochs and epochs_no_improve >= patience:
+                print(f"⏹️ Early stopping activado en la época {epoch}. "
+                      f"No hay mejora en {patience} épocas consecutivas.")
+                break
 
         print("✅ Entrenamiento finalizado (solo decoder entrenado).")
 
@@ -85,7 +118,6 @@ class UNetResNet34Segmenter(Model):
                     pred_np = pred_bin[i].cpu().numpy().squeeze()
                     true_np = true_bin[i].cpu().numpy().squeeze()
 
-                    # --- Métricas píxel a píxel ---
                     TP = np.logical_and(pred_np == 1, true_np == 1).sum()
                     TN = np.logical_and(pred_np == 0, true_np == 0).sum()
                     FP = np.logical_and(pred_np == 1, true_np == 0).sum()
@@ -97,20 +129,17 @@ class UNetResNet34Segmenter(Model):
                     accuracy = (TP + TN) / (TP + TN + FP + FN + 1e-8)
                     f1 = (2 * precision * recall) / (precision + recall + 1e-8)
 
-                    # --- IoU y Dice ---
                     intersection = TP
                     union = TP + FP + FN
                     iou = intersection / (union + 1e-8)
                     dice = (2 * TP) / (2 * TP + FP + FN + 1e-8)
 
-                    # Guardar en listas globales
                     for k, v in zip(
                         ["iou", "dice", "precision", "recall", "specificity", "accuracy", "f1"],
                         [iou, dice, precision, recall, specificity, accuracy, f1],
                     ):
                         metrics_global[k].append(v)
 
-                    # --- Bounding boxes ---
                     boxes_pred = masks_to_boxes(pred_bin[i]) if pred_bin[i].sum() > 0 else torch.empty((0, 4))
                     boxes_true = masks_to_boxes(true_bin[i]) if true_bin[i].sum() > 0 else torch.empty((0, 4))
 
@@ -127,12 +156,10 @@ class UNetResNet34Segmenter(Model):
                         "f1": float(f1)
                     })
 
-        # --- Guardar CSV detallado ---
         os.makedirs(os.path.dirname(output_csv), exist_ok=True)
         df = pd.DataFrame(all_results)
         df.to_csv(output_csv, index=False)
 
-        # --- Métricas globales (promedio) ---
         mean_metrics = {k: np.mean(v) for k, v in metrics_global.items()}
         os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
         pd.DataFrame([mean_metrics]).to_csv(metrics_path, index=False)
@@ -146,7 +173,7 @@ class UNetResNet34Segmenter(Model):
         )
 
         return mean_metrics, df
-    
+
     def predict(self, image_paths, threshold=0.5):
         self.eval()
         self.to(self.device)
@@ -157,12 +184,11 @@ class UNetResNet34Segmenter(Model):
                 img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
                 img = cv2.resize(img, (256, 256))
                 img = np.stack([img] * 3, axis=-1)
-                tensor = torch.tensor(img / 255.0, dtype=torch.float32).permute(2,0,1).unsqueeze(0).to(self.device)
+                tensor = torch.tensor(img / 255.0, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(self.device)
 
-                pred_mask = torch.sigmoid(self.model(tensor))[0,0].cpu()
+                pred_mask = torch.sigmoid(self.model(tensor))[0, 0].cpu()
                 pred_bin = (pred_mask > threshold).to(torch.uint8)
-
-                boxes_pred = masks_to_boxes(pred_bin) if pred_bin.sum() > 0 else torch.empty((0,4))
+                boxes_pred = masks_to_boxes(pred_bin) if pred_bin.sum() > 0 else torch.empty((0, 4))
 
                 predictions.append({
                     "image_path": path,
@@ -171,7 +197,6 @@ class UNetResNet34Segmenter(Model):
                 })
 
         return predictions
-
 
     def save(self, path="weights/unet_resnet34_transfer.pth"):
         os.makedirs(os.path.dirname(path), exist_ok=True)

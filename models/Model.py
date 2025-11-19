@@ -6,7 +6,8 @@ class Model(nn.Module):
         super().__init__()
 
     @abstractmethod
-    def train(self, trainloader, epochs, learning_rate, device="cuda"):
+    def train(self, trainloader, validation_loader, epochs, learning_rate,
+              patience=7, min_epochs=10, delta=1e-3, device="cuda"):
         pass
     
     @abstractmethod

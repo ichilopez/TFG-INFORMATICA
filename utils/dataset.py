@@ -6,9 +6,9 @@ from utils.classification.ClassificationImageManager import ClassificationImageM
 def getDataLoaders(study_type, modelName, batch_size, num_workers):
     validate_model_study(study_type, modelName)
     imageManager = getImageManager(study_type)
-    trainDataLoader, testDataLoader = imageManager.getDataLoaders(
+    trainDataLoader, valDataLoader, testDataLoader = imageManager.getDataLoaders(
         batch_size, num_workers,modelName)
-    return trainDataLoader, testDataLoader
+    return trainDataLoader, valDataLoader, testDataLoader
 
 
 def getImageManager(study_type):

@@ -4,13 +4,21 @@ from torch.utils.data import DataLoader
 from utils.classification.ClassificationDataSet import ClassificationDataSet
 import matplotlib.pyplot as plt
 from torchvision import transforms
-path_mass_test = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test_set.csv'
-path_mass_train = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train_set.csv'
+import yaml
 
 class ClassificationImageManager(ImageManager):
     def getDataLoaders(self, batch_size, num_workers,model_name):
-        train_data = pd.read_csv(path_mass_train)
-        test_data = pd.read_csv(path_mass_test)
+
+        with open("configs/config.yaml", "r") as f:
+            self.cfg = yaml.safe_load(f)
+
+        self.path_mass_train = self.cfg["data"]["train_csv"]
+        self.path_mass_val = self.cfg["data"]["val_csv"]
+        self.path_mass_test = self.cfg["data"]["test_csv"]
+
+        train_data = pd.read_csv(self.path_mass_train)
+        val_data = pd.read_csv(self.path_mass_val)
+        test_data = pd.read_csv(self.path_mass_test)
 
         train_transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -32,16 +40,19 @@ class ClassificationImageManager(ImageManager):
 
         train_info = self.__getPathsAndLabels(train_data)
         test_info = self.__getPathsAndLabels(test_data)
+        val_info = self.__getPathsAndLabels(val_data)
 
         train_dataset = ClassificationDataSet(data_info=train_info, transform=train_transform)
         test_dataset = ClassificationDataSet(data_info=test_info, transform=test_transform)
+        val_dataset = ClassificationDataSet(data_info=val_info,transform=test_transform)
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         self.show_images_with_labels(train_loader)
 
-        return train_loader, test_loader
+        return train_loader,val_loader,test_loader
 
     def __getPathsAndLabels(self, data):
         info_list = []

@@ -6,14 +6,16 @@ train:
 
 data:
   
-  train_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train.csv"
-  test_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test.csv"
+  train_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train_set.csv"
+  test_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test_set.csv"
+  val_csv: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_val_set.csv"
   img_dir: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/jpeg"
-  study_type: "segmentationStudy"  # o "classificationStudy", "segmentationStudy"
+  study_type: "classificationStudy"  # o "classificationStudy", "segmentationStudy"
   num_workers: 4
+  patience: 5
 
 model:
-   model_name: "unetresnet34" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "mobilenetv2" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
    model_path: null
    num_classes : 2
 

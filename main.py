@@ -14,7 +14,7 @@ def main(config_path="configs/config.yaml"):
 
     device = torch.device(cfg["train"]["device"] if torch.cuda.is_available() else "cpu")
 
-    train_dataLoader, test_dataLoader = dataset.getDataLoaders(
+    trainDataLoader,validationDataLoader, testDataLoader  = dataset.getDataLoaders(
         cfg["data"]["study_type"],
         cfg["model"]["model_name"],
         cfg["train"]["batch_size"],
@@ -23,7 +23,7 @@ def main(config_path="configs/config.yaml"):
     
     model = get_model(
     model_name=cfg["model"]["model_name"],
-    num_classes=cfg["model"]["num_classes"],   # asegúrate de tenerlo en el YAML
+    num_classes=cfg["model"]["num_classes"],   
     model_path=cfg["save"]["model_input_path"]
     )
     print("Training...")

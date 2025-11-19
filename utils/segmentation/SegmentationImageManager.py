@@ -1,29 +1,34 @@
 from utils.ImageManager import ImageManager
 import pandas as pd
-from utils.segmentation.YoloSegmentationDataset import YoloSegmentationDataset
+from utils.segmentation.YoloSegmentationDataset import YoloDataset
 from torch.utils.data import DataLoader
-from utils.segmentation.UnetResNet34Dataset import UnetResNet34Dataset
+from utils.segmentation.UnetResNet34Dataset import UnetDataset
 import matplotlib.pyplot as plt
 import numpy as np
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
-
-path_mass_test = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_test_set.csv'
-path_mass_train = 'C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive/csv/mass_case_description_train_set.csv'
+import yaml
 
 
 class SegmentationImageManager(ImageManager):      
     
     def getDataLoaders(self, batch_size, num_workers, model_name):
-        if train_transform is None or test_transform is None:
-            raise ValueError("SegmentationDataset requiere Albumentations")
+        
+        with open("configs/config.yaml", "r") as f:
+            self.cfg = yaml.safe_load(f)
 
-        train_data = pd.read_csv(path_mass_train)
-        test_data = pd.read_csv(path_mass_test)
+        self.path_mass_train = self.cfg["data"]["train_csv"]
+        self.path_mass_val = self.cfg["data"]["val_csv"]
+        self.path_mass_test = self.cfg["data"]["test_csv"]
+
+        train_data = pd.read_csv(self.path_mass_train)
+        val_data = pd.read_csv(self.path_mass_val)
+        test_data = pd.read_csv(self.path_mass_test)
 
         if model_name == "yolo":
             train_info = self.__getPathsAndBBoxes(train_data)
             test_info = self.__getPathsAndBBoxes(test_data)
+            val_info = self.__getPathsAndBBoxes(val_data)
 
             train_transform = A.Compose([
              A.Resize(640, 640),
@@ -42,17 +47,20 @@ class SegmentationImageManager(ImageManager):
             ToTensorV2()
             ])
 
-            train_dataset = YoloSegmentationDataset(data_info=train_info, transform=train_transform)
-            test_dataset = YoloSegmentationDataset(data_info=test_info, transform=test_transform)
+            train_dataset = YoloDataset(data_info=train_info, transform=train_transform)
+            val_dataset = YoloDataset(data_info= val_info, transform= test_transform)
+            test_dataset = YoloDataset(data_info=test_info, transform=test_transform)
             
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
             test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
             show_yolo_samples(train_loader)
 
 
         elif model_name == "unetresnet34":
           train_info = self.__getImageAndROIMaskPaths(train_data)
           test_info  = self.__getImageAndROIMaskPaths(test_data)
+          val_info = self.__getImageAndROIMaskPaths(val_data)
 
           train_transform = A.Compose([
            A.Resize(256, 256),
@@ -74,16 +82,18 @@ class SegmentationImageManager(ImageManager):
            ],
           bbox_params=A.BboxParams(format='pascal_voc', label_fields=[]))
   
-          train_dataset = UnetResNet34Dataset(data_info=train_info, transform=train_transform)
-          test_dataset = UnetResNet34Dataset(data_info=test_info, transform=test_transform)
+          train_dataset = UnetDataset(data_info=train_info, transform=train_transform)
+          test_dataset = UnetDataset(data_info=test_info, transform=test_transform)
+          val_dataset = UnetDataset(data_info=val_info, transform=test_transform)
             
           train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
           test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+          val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
           show_unet_resnet34_samples(train_loader)
         else:
                raise ValueError(f"Modelo desconocido: {model_name}")
         
-        return train_loader, test_loader
+        return train_loader,val_loader,test_loader
 
 
     def __getPathsAndBBoxes(self, data):
