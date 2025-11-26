@@ -24,14 +24,14 @@ class UNetResNet34Segmenter(Model):
 
         for param in self.model.encoder.parameters():
             param.requires_grad = False
-        print("🧊 Encoder congelado (Transfer Learning puro activado).")
+        print("Encoder congelado (Transfer Learning puro activado).")
 
         if model_path and os.path.exists(model_path):
             state_dict = torch.load(model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
-            print(f"✅ Modelo cargado correctamente desde {model_path}")
+            print(f"Modelo cargado correctamente desde {model_path}")
         else:
-            print("ℹ️ Modelo inicializado con pesos preentrenados (ImageNet).")
+            print("ℹ Modelo inicializado con pesos preentrenados (ImageNet).")
 
 
     def train(self, trainloader, validation_loader, epochs, learning_rate,
@@ -47,7 +47,7 @@ class UNetResNet34Segmenter(Model):
         best_val_loss = float("inf")
         epochs_no_improve = 0
 
-        print(f"🚀 Entrenando durante {epochs} épocas con early stopping (patience={patience})...\n")
+        print(f" Entrenando durante {epochs} épocas con early stopping (patience={patience})...\n")
 
         for epoch in range(1, epochs + 1):
             self.model.train()

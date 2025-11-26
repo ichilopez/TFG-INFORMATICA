@@ -31,7 +31,8 @@ class UnetDataset(Dataset):
             bboxes = []
 
         if self.transform:
-            transformed = self.transform(image=img, mask=mask, bboxes=bboxes)
+            labels = [0] * len(bboxes)  # o 0 si siempre hay 1 bbox
+            transformed = self.transform(image=img, mask=mask, bboxes=bboxes,labels=labels)
             img = transformed['image']
             mask = transformed['mask']
             bboxes = transformed['bboxes']

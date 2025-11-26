@@ -52,16 +52,18 @@ class YOLOSegmenter(Model):
      return images_dir, labels_dir
 
   
-    def train(self, trainloader, epochs=50, learning_rate=1e-3, device="cuda", freeze_layers=10):
+    def train(self, trainLoader, valLoader, epochs=50, learning_rate=1e-3, device="cuda", freeze_layers=10):
         
         with tempfile.TemporaryDirectory() as tmpdir:
-            print(f"📁 Creando dataset temporal para YOLO en: {tmpdir}")
+            print(f"Creando dataset temporal para YOLO en: {tmpdir}")
 
             train_images_dir, _ = self._create_yolo_dataset_structure(
-                trainloader.dataset.data_info, tmpdir, subset="train"
+                trainLoader.dataset.data_info, tmpdir, subset="train"
             )
 
-            val_images_dir = train_images_dir
+            val_images_dir = self._create_yolo_dataset_structure(
+                valLoader.dataset.data_info, tmpdir, subset="validation"
+            )
 
             data_yaml_path = os.path.join(tmpdir, 'dataset.yaml')
             data_dict = {
@@ -73,8 +75,7 @@ class YOLOSegmenter(Model):
             with open(data_yaml_path, 'w') as f:
                 yaml.dump(data_dict, f)
 
-            # Entrenar YOLO
-            print("🚀 Iniciando entrenamiento YOLOv8 ...")
+            print("Iniciando entrenamiento YOLOv8 ...")
             self.model.train(
                 data=data_yaml_path,
                 epochs=epochs,
