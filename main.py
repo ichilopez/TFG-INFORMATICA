@@ -24,7 +24,7 @@ def main(config_path="configs/config.yaml"):
     model = get_model(
     model_name=cfg["model"]["model_name"],
     num_classes=cfg["model"]["num_classes"],   
-    model_path=cfg["save"]["model_input_path"]
+    model_path=cfg["model"]["model_path"]
     )
     print("Training...")
     # model.train(model, train_dataLoader, device, cfg["train"]["epochs"], cfg["train"]["learning_rate"],cfg["data"]["study_type"])

@@ -4,7 +4,8 @@ from models.Model import Model
 import torch
 import pandas as pd
 import os
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import precision_score, recall_score, f1_score
+import yaml
 
 class Classifier(Model):
     def __init__(self):
@@ -68,7 +69,12 @@ class Classifier(Model):
         return total_loss / len(dataloader)
 
     def evaluate(self, testloader, metrics_path="results/metrics.csv",
-                 device="cuda", output_path="results/evaluation_results.csv"):
+                 device="cuda"):
+        with open("configs/config.yaml","r") as f:
+            cfg = yaml.safe_load(f)
+        
+        output_path = cfg["save"]["results_path"]
+        metrics_path = cfg["save"]["metrics_path"]
 
         self.model.to(device)
         self.model.eval()
@@ -82,20 +88,16 @@ class Classifier(Model):
 
         with torch.no_grad():
             for batch in testloader:
-                if isinstance(batch, dict):
-                    inputs, labels = batch["image"], batch["label"]
-                    image_paths = batch.get("image_path", [None] * len(inputs))
-                else:
-                    inputs, labels = batch
-                    image_paths = [None] * len(inputs)
+                inputs, labels, image_paths= batch
+                image_paths = [None] * len(inputs)
 
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = self.model(inputs)
                 loss = criterion(outputs, labels)
                 running_loss += loss.item()
 
-                predicted = torch.argmax(outputs, dim=1)
-                y_true_all.extend(labels.cpu().numpy())
+                predicted = torch.argmax(outputs, dim=1) #obtenemos la clase con mayor probabilidad
+                y_true_all.extend(labels.cpu().numpy()) #
                 y_pred_all.extend(predicted.cpu().numpy())
 
                 for img_path, true, pred in zip(image_paths, labels.cpu().numpy(), predicted.cpu().numpy()):

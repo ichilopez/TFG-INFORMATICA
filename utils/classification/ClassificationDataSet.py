@@ -12,8 +12,9 @@ class ClassificationDataSet(Dataset):
 
     def __getitem__(self, idx):
         info = self.data_info[idx]
+        img_path = info['file_path_image']
 
-        img = Image.open(info['file_path_image']).convert("L")  
+        img = Image.open(img_path).convert("L")  
 
         if self.transform:
             img = self.transform(img)
@@ -21,4 +22,4 @@ class ClassificationDataSet(Dataset):
         label_str = str(info['label']).strip().upper()
         label = self.label_map.get(label_str, -1)
 
-        return img, label
+        return img, label, img_path

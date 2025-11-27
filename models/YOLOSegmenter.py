@@ -12,7 +12,14 @@ from PIL import Image
 class YOLOSegmenter(Model):
     def __init__(self, model_path=None):
         super().__init__()
-        self.model = YOLO(model_path if model_path else 'yolov8n.pt')
+        if model_path:
+            self.model = YOLO(model_path)
+            self.model.freeze()
+            for name, param in self.model.named_parameters():
+             if 'head' in name:  #solo descongelamos las últimas capas
+              param.requires_grad = True 
+        else:
+            self.model = YOLO('yolov8n.pt')
 
 
     def _create_yolo_dataset_structure(self, data_info, base_dir, subset="train"):
