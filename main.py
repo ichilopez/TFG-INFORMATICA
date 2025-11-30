@@ -18,22 +18,22 @@ def main(config_path="configs/config.yaml"):
         cfg["data"]["study_type"],
         cfg["model"]["model_name"],
         cfg["train"]["batch_size"],
-        cfg["data"]["num_workers"]
+       cfg["data"]["num_workers"]
     )
-    
+    ""
     model = get_model(
     model_name=cfg["model"]["model_name"],
     num_classes=cfg["model"]["num_classes"],   
     model_path=cfg["model"]["model_path"]
     )
     print("Training...")
-    # model.train(model, train_dataLoader, device, cfg["train"]["epochs"], cfg["train"]["learning_rate"],cfg["data"]["study_type"])
+    model.train(trainDataLoader,validationDataLoader,cfg["train"]["epochs"], cfg["train"]["learning_rate"])
     print("Evaluating...")
     # model.evaluate(test_dataLoader)
     print("Saving..")
     # if not cfg["model"]["output_dir"]:
     #print("⚠️ Advertencia: no se especificó 'output_dir', se usará la ruta por defecto.")
-    # model.save()  
+    model.save()  
     #else:
     # model.save(output_dir)
     # print("Modelo guardado exitosamente")

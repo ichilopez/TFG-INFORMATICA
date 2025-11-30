@@ -1,6 +1,6 @@
 train:
-  batch_size: 64
-  epochs: 10
+  batch_size: 10
+  epochs: 50
   learning_rate: 0.001
   device: "cuda"
 
@@ -10,13 +10,13 @@ data:
   test_csv: "/content/drive/MyDrive/TFG/datos/csv/mass_case_description_test_set.csv"
   val_csv: "/content/drive/MyDrive/TFG/datos/csv/mass_case_description_val_set.csv"
   img_dir: "/content/drive/MyDrive/TFG/datos/csv/jpeg"
-  study_type: "segmentationStudy"  # o "classificationStudy", "segmentationStudy"
+  study_type: "classificationStudy"  # o "classificationStudy", "segmentationStudy"
   num_workers: 4
   patience: 5
-  data_yaml_path: "/content/drive/MyDrive/TFG/datos/csv/yolo_data"
+  data_yaml_path: "/content/drive/MyDrive/TFG/datos/csv/dataset.yaml"
 
 model:
-   model_name: "unetresnet34" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "efficientnetb0" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
    model_path: null
    num_classes : 2
 

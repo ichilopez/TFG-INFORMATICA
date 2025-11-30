@@ -18,7 +18,7 @@ class YOLOSegmenter(Model):
                 if 'head' in name:
                     param.requires_grad = True
 
-    def train(self, epochs=50, learning_rate=1e-3, device="cuda", freeze_layers=10, batch_size=8):
+    def train(self, epochs=50, learning_rate=1e-3, device="cuda", freeze_layers=10,batch_size=8):
         """
         Entrena YOLOv8 usando un archivo data.yaml con rutas absolutas a las imágenes.
         Los .txt deben estar generados junto a cada imagen.
@@ -33,7 +33,6 @@ class YOLOSegmenter(Model):
             epochs=epochs,
             imgsz=640,
             batch=batch_size,
-            freeze=freeze_layers,
             device=device,
             lr0=learning_rate,
             patience=10

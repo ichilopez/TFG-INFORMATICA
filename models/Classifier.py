@@ -28,7 +28,7 @@ class Classifier(Model):
             self.model.train()
             running_loss = 0.0
 
-            for inputs, labels in trainloader:
+            for inputs, labels,img_path in trainloader:
                 inputs, labels = inputs.to(device), labels.to(device)
 
                 optimizer.zero_grad()
@@ -61,7 +61,7 @@ class Classifier(Model):
         self.model.eval()
         total_loss = 0.0
         with torch.no_grad():
-            for inputs, labels in dataloader:
+            for inputs, labels,img_path in dataloader:
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = self.model(inputs)
                 loss = criterion(outputs, labels)

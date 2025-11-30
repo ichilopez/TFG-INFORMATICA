@@ -50,7 +50,7 @@ class ClassificationImageManager(ImageManager):
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-        self.show_images_with_labels(train_loader)
+        #self.show_images_with_labels(train_loader)
 
         return train_loader,val_loader,test_loader
 
