@@ -1,10 +1,10 @@
-from models.Classifier import Classifier
+from models.Model import Model
 from torchvision import models
 import torch
 import torch.nn as nn
 import os
 
-class EfficientNetB0Classifier(Classifier):
+class EfficientNetB0Classifier(Model):
     def __init__(self, num_classes=2, model_path: str = None):
         super().__init__()
         if model_path:
@@ -19,6 +19,9 @@ class EfficientNetB0Classifier(Classifier):
         
         in_features = self.model.classifier[1].in_features
         self.model.classifier[1] = nn.Linear(in_features, num_classes)
+
+    def getModel(self):
+        return self.model
 
        
     def save(self, path="weights/efficientnetb0.pt"):

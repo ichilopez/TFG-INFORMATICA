@@ -1,11 +1,11 @@
 import timm
 import torch
 import torch.nn as nn
-from models.Classifier import Classifier
+from models.Model import Model
 import os
 
-class ViTSmallClassifier(Classifier):
-    def __init__(self, num_classes: int, model_path: str = None):
+class ViTSmallClassifier(Model):
+    def __init__(self, model_path: str = None,num_classes=2):
         super().__init__()
 
         if model_path:
@@ -21,8 +21,10 @@ class ViTSmallClassifier(Classifier):
         in_features = self.model.head.in_features
         self.model.head = nn.Linear(in_features, num_classes)
 
-        
+    def getModel(self):
+        return self.model
 
+        
     def save(self, path="weights/medvit.pt"):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(self.model.state_dict(), path)

@@ -1,73 +1,65 @@
-from utils.ImageManager import ImageManager
-import pandas as pd
+
 from torch.utils.data import DataLoader
 from utils.classification.ClassificationDataSet import ClassificationDataSet
 import matplotlib.pyplot as plt
 from torchvision import transforms
 import yaml
+import lightning as L
+import os
+from torchvision import transforms
+class ClassificationImageManager(L.LightningDataModule):
 
-class ClassificationImageManager(ImageManager):
-    def getDataLoaders(self, batch_size, num_workers,model_name):
+    def __init__(self, batch_size, num_workers):
 
         with open("configs/config.yaml", "r") as f:
             self.cfg = yaml.safe_load(f)
 
-        self.path_mass_train = self.cfg["data"]["train_csv"]
-        self.path_mass_val = self.cfg["data"]["val_csv"]
-        self.path_mass_test = self.cfg["data"]["test_csv"]
+        self.main_path = self.cfg["data"]["main_path"]
+        self.batch_size = batch_size
+        self.num_workers = num_workers
 
-        train_data = pd.read_csv(self.path_mass_train)
-        val_data = pd.read_csv(self.path_mass_val)
-        test_data = pd.read_csv(self.path_mass_test)
+    
+    def prepare_data(self):
+       pass
 
-        train_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.Grayscale(num_output_channels=3),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(5),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+    def setup(self,stage=None):
+       image_size = 224
+       brightness= 0.05
+       contrast = 0.05
+       imagenet_mean = [0.485, 0.456, 0.406]
+       imagenet_std = [0.229, 0.224, 0.225] # Transform para entrenamiento
+       train_transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=3),  # convierte 1 canal → 3 canales
+        transforms.Resize((image_size, image_size)),
+        transforms.RandomApply(
+         [transforms.ColorJitter(brightness=brightness, contrast=contrast)],
+         p=0.5
+        ),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
 
-        test_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.Grayscale(num_output_channels=3),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+       val_transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=3),
+        transforms.Resize((image_size, image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
 
-        train_info = self.__getPathsAndLabels(train_data)
-        test_info = self.__getPathsAndLabels(test_data)
-        val_info = self.__getPathsAndLabels(val_data)
+       self.train_dataset = ClassificationDataSet(path=os.join(self.main_path,"train"),transform=train_transform)
+       self.test_dataset = ClassificationDataSet(path=os.join(self.main_path,"test"),transform=val_transform)
+       self.val_dataset = ClassificationDataSet(path=os.join(self.main_path,"validation"))
 
-        train_dataset = ClassificationDataSet(data_info=train_info, transform=train_transform)
-        test_dataset = ClassificationDataSet(data_info=test_info, transform=test_transform)
-        val_dataset = ClassificationDataSet(data_info=val_info,transform=test_transform)
 
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    def train_dataloader(self):
+       return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+    
+    def test_dataloader(self):
+       return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+    
+    def val_dataloader(self):
+       return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
-        self.show_images_with_labels(train_loader)
-
-        return train_loader,val_loader,test_loader
-
-    def __getPathsAndLabels(self, data):
-        info_list = []
-        for i in range(len(data)):
-            try:
-                image_path = data.loc[i, 'cropped image file path']
-                label = data.loc[i, 'pathology']
-                info_list.append({
-                    'file_path_image': image_path,
-                    'label': label
-                })
-            except Exception as e:
-                print(f"⚠️ Error procesando índice {i}: {e}")
-
-        return info_list
     
     def show_images_with_labels(self, dataloader, title="Train Images", num_images=5):
      imgs, labels = next(iter(dataloader))

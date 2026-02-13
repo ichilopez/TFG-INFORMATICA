@@ -1,25 +1,30 @@
 from torch.utils.data import Dataset
 from PIL import Image
+import os
 
 class ClassificationDataSet(Dataset):
-    def __init__(self, data_info, transform=None):
-        self.data_info = data_info
+    def __init__(self, path, transform=None):
+        self.path = path
         self.transform = transform
-        self.label_map = {"BENIGN": 0, "MALIGNANT": 1}
+        self.image_files = os.listdir(path)  # lista de carpetas dentro de path
 
     def __len__(self):
-        return len(self.data_info)
+        return len(self.image_files)
 
     def __getitem__(self, idx):
-        info = self.data_info[idx]
-        img_path = info['file_path_image']
+        # ruta completa a la carpeta del caso
+        img_folder = os.path.join(self.path, self.image_files[idx])
 
-        img = Image.open(img_path).convert("L")  
+        # ruta a la imagen y al label
+        img_path = os.path.join(img_folder, "1.jpeg")
+        label_path = os.path.join(img_folder, "label.txt")
 
-        if self.transform:
+        img = Image.open(img_path).convert("RGB")
+        if self.transform is not None:
             img = self.transform(img)
 
-        label_str = str(info['label']).strip().upper()
-        label = self.label_map.get(label_str, -1)
+        with open(label_path, "r") as f:
+            contenido = f.read().strip()
+        label = int(contenido)
 
-        return img, label, img_path
+        return img, label

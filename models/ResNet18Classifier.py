@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from models.Classifier import Classifier
+from models.Model import Model
 import os
 
-class ResNet18Classifier(Classifier):
+class ResNet18Classifier(Model):
     def __init__(self, num_classes=2, model_path=None):
         super().__init__()
         if model_path:
@@ -19,6 +19,8 @@ class ResNet18Classifier(Classifier):
         in_features = self.model.fc.in_features
         self.model.fc = nn.Linear(in_features, num_classes)
 
+    def getModel(self):
+        return self.model
        
     
     def save(self, path="weights/resnet18.pt"):
