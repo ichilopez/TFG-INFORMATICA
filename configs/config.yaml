@@ -8,7 +8,7 @@ data:
   main_path: "C:\\Users\\Itziar\\Documents\\Documentos\\TFG-INF-DATOS\\archive2"
 
 model:
-   model_name: "efficientnetb0" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
    model_path: null
    num_classes : 2
 

@@ -21,7 +21,7 @@ class MobileNetV2Classifier(Model):
         self.model.classifier[1] = nn.Linear(in_features, num_classes)
     
     def getModel(self):
-        return self
+        return self.model
 
     def save(self, path="weights/mobilenetv2.pt"):
         os.makedirs(os.path.dirname(path), exist_ok=True)
