@@ -1,6 +1,6 @@
 train:
-  batch_size: 64
-  epochs: 10
+  batch_size: 10
+  epochs: 50
   learning_rate: 0.001
   device: "cuda"
   num_workers: 4
@@ -8,13 +8,10 @@ train:
 data:
   
   main_path: "C:/Users/Itziar/Documents/Documentos/TFG-INF-DATOS/archive2"
-  study_type: "segmentationStudy"  # o "classificationStudy", "segmentationStudy"
-  
-  patience: 5
-  data_yaml_path: "/content/drive/MyDrive/TFG/datos/csv/yolo_data.yaml"
+  num_workers: 4
 
 model:
-   model_name: "unetresnet34" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "yolo" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
    model_path: null
    num_classes : 2
 

@@ -11,11 +11,18 @@ class Classifier(L.LightningModule):
         self.model = model
         self.lr=lr
          # Definir métricas con torchmetrics
+<<<<<<< HEAD
         self.test_accuracy = torchmetrics.Accuracy()
         self.test_precision = torchmetrics.Precision(num_classes=2, average='macro')
         self.test_recall = torchmetrics.Recall(num_classes=2, average='macro')
         self.test_f1 = torchmetrics.F1Score(num_classes=2, average='macro')
         self.prepare_data_per_node = False 
+=======
+        self.test_accuracy = torchmetrics.Accuracy(task="binary",threshold=0.5)
+        self.test_precision = torchmetrics.Precision(num_classes=2, average='macro',task="binary",threshold=0.5)
+        self.test_recall = torchmetrics.Recall(num_classes=2, average='macro',task="binary",threshold=0.5)
+        self.test_f1 = torchmetrics.F1Score(num_classes=2, average='macro',task="binary",threshold=0.5)
+>>>>>>> recuperar_cambios
         
     def forward(self,x):
         return self.model(x)
