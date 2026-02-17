@@ -19,13 +19,10 @@ class MobileNetV2Classifier(Model):
         
         in_features = self.model.classifier[1].in_features
         self.model.classifier[1] = nn.Linear(in_features, num_classes)
+        
     
     def getModel(self):
-<<<<<<< HEAD
-        return self
-=======
         return self.model
->>>>>>> recuperar_cambios
 
     def save(self, path="weights/mobilenetv2.pt"):
         os.makedirs(os.path.dirname(path), exist_ok=True)

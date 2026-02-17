@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torchmetrics
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score,accuracy_score
 import lightning as L
 
 class Classifier(L.LightningModule):
@@ -10,19 +10,12 @@ class Classifier(L.LightningModule):
         self.loss_fn = nn.CrossEntropyLoss()
         self.model = model
         self.lr=lr
-         # Definir métricas con torchmetrics
-<<<<<<< HEAD
-        self.test_accuracy = torchmetrics.Accuracy()
-        self.test_precision = torchmetrics.Precision(num_classes=2, average='macro')
-        self.test_recall = torchmetrics.Recall(num_classes=2, average='macro')
-        self.test_f1 = torchmetrics.F1Score(num_classes=2, average='macro')
+        self.test_accuracy = torchmetrics.Accuracy(task ='binary',num_classes=2)
+        self.test_precision = torchmetrics.Precision(num_classes=2,task ='binary',average='macro')
+        self.test_recall = torchmetrics.Recall(num_classes=2, task ='binary', average='macro')
+        self.test_f1 = torchmetrics.F1Score(num_classes=2, task ='binary', average='macro')
         self.prepare_data_per_node = False 
-=======
-        self.test_accuracy = torchmetrics.Accuracy(task="binary",threshold=0.5)
-        self.test_precision = torchmetrics.Precision(num_classes=2, average='macro',task="binary",threshold=0.5)
-        self.test_recall = torchmetrics.Recall(num_classes=2, average='macro',task="binary",threshold=0.5)
-        self.test_f1 = torchmetrics.F1Score(num_classes=2, average='macro',task="binary",threshold=0.5)
->>>>>>> recuperar_cambios
+
         
     def forward(self,x):
         return self.model(x)
@@ -34,8 +27,25 @@ class Classifier(L.LightningModule):
         self.log("train_loss",loss)
         return loss
     
+    
+
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(),self.lr)
+     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+
+     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        patience=3,
+        factor=0.5
+     )
+
+     return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": scheduler,
+            "monitor": "val_loss"
+        }
+    }
     
     def validation_step(self, batch, batch_idx):
         x, y = batch

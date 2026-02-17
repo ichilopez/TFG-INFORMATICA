@@ -1,11 +1,7 @@
 train: /content/drive/MyDrive/datos/yolo/train.txt
 val:   /content/drive/MyDrive/datos/yolo/val.txt
-test:  /content/drive/MyDrive/datos/test.txt
+test:  /content/drive/MyDrive/datos/yolo/test.txt
 
-labels:
-  train: /content/drive/MyDrive/datos/yolo/labels_train.txt
-  val:   /content/drive/MyDrive/datos/yolo/labels_val.txt
-  test:  /content/drive/MyDrive/datos/yolo/labels_test.txt
 
 nc: 1
 names: ["tumor"]

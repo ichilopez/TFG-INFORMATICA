@@ -17,22 +17,15 @@ class ClassificationDataSet(Dataset):
 
         # ruta a la imagen y al label
         img_path = os.path.join(img_folder, "1.jpeg")
-<<<<<<< HEAD
-        label_path = os.path.join(img_folder, "label.txt")
-=======
+
         label_path = os.path.join(img_folder, "pathology.txt")
->>>>>>> recuperar_cambios
+
 
         img = Image.open(img_path).convert("RGB")
         if self.transform is not None:
             img = self.transform(img)
 
         with open(label_path, "r") as f:
-<<<<<<< HEAD
-            contenido = f.read().strip()
-        label = int(contenido)
-
-=======
           word = f.readline().strip().upper()
           if word == "BENIGN":
            label = 0
@@ -40,5 +33,4 @@ class ClassificationDataSet(Dataset):
            label = 1
           else:
            raise ValueError(f"Etiqueta desconocida en {label_path}: {word}")
->>>>>>> recuperar_cambios
         return img, label

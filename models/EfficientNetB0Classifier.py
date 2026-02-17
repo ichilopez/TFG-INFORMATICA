@@ -24,13 +24,10 @@ class EfficientNetB0Classifier(Model):
     def getModel(self):
         return self.model
 
-<<<<<<< HEAD
     def getModel(self):
         return self.model
 
-       
-=======
->>>>>>> recuperar_cambios
+  
     def save(self, path="weights/efficientnetb0.pt"):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         try:

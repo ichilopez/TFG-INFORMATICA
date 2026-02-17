@@ -7,12 +7,6 @@ import yaml
 import lightning as L
 import os
 from torchvision import transforms
-<<<<<<< HEAD
-class ClassificationImageManager(L.LightningDataModule):
-
-    def __init__(self, batch_size, num_workers):
-=======
-import torch
 class ClassificationImageManager(L.LightningDataModule):
 
     def __init__(self, batch_size, num_workers):
@@ -20,7 +14,6 @@ class ClassificationImageManager(L.LightningDataModule):
         super().__init__()
 
         self.save_hyperparameters()
->>>>>>> recuperar_cambios
 
         with open("configs/config.yaml", "r") as f:
             self.cfg = yaml.safe_load(f)
@@ -28,7 +21,8 @@ class ClassificationImageManager(L.LightningDataModule):
         self.main_path = self.cfg["data"]["main_path"]
         self.batch_size = batch_size
         self.num_workers = num_workers
-<<<<<<< HEAD
+        self.prepare_data_per_node = False 
+
 
     
     def prepare_data(self):
@@ -72,10 +66,8 @@ class ClassificationImageManager(L.LightningDataModule):
     def val_dataloader(self):
        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
-=======
-        self.prepare_data_per_node = False 
+       
 
->>>>>>> recuperar_cambios
     
     def prepare_data(self):
        pass

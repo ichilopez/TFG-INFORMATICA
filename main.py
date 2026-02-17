@@ -40,7 +40,7 @@ def main(config_path="configs/config.yaml"):
     filename="best-{epoch:02d}-{val_loss:.4f}"
     )
 
-    name_csv = cfg["model"]["model_name"],
+    name_csv = cfg["model"]["model_name"]
 
     csv_logger = CSVLogger(
     save_dir="logs",
