@@ -24,9 +24,6 @@ class EfficientNetB0Classifier(Model):
     def getModel(self):
         return self.model
 
-    def getModel(self):
-        return self.model
-
   
     def save(self, path="weights/efficientnetb0.pt"):
         os.makedirs(os.path.dirname(path), exist_ok=True)

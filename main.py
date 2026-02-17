@@ -104,7 +104,7 @@ def get_model(model_name: str, batch_size,num_workers,num_classes=2, model_path:
 def main_yolo():
     data_yaml = "configs/data.yaml"
 
-    model = YOLO("yolov8n-seg.pt")  
+    model = YOLO("yolov8n.pt")  
 
     with open("configs/config.yaml", "r") as f:
         cfg = yaml.safe_load(f)

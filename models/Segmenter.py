@@ -14,8 +14,6 @@ class Segmenter(L.LightningModule):
         self.lr = lr
         self.model = model
         self.loss_fn = nn.BCEWithLogitsLoss()
-
-        # métricas de segmentación 
         self.test_iou = torchmetrics.JaccardIndex(task="binary")
         self.test_dice = torchmetrics.F1Score(task="binary")  # Dice ~ F1 para segmentación
 
@@ -26,7 +24,6 @@ class Segmenter(L.LightningModule):
         imgs, masks = batch
         logits = self(imgs)
 
-        # ajustar tamaño de logits si difiere de mask
         if logits.shape[2:] != masks.shape[2:]:
             logits = F.interpolate(logits, size=masks.shape[2:], mode="bilinear", align_corners=False)
 
@@ -63,5 +60,21 @@ class Segmenter(L.LightningModule):
         self.log("test_iou", iou, prog_bar=True)
         self.log("test_dice", dice, prog_bar=True)
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+    
+    def configure_optimizers(self): #vamos adaptando el lr durante el entrenamiento
+     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+
+     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        patience=3,
+        factor=0.5
+     )
+
+     return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": scheduler,
+            "monitor": "val_loss"
+        }
+    }

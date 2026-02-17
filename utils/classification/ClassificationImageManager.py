@@ -7,6 +7,7 @@ import yaml
 import lightning as L
 import os
 from torchvision import transforms
+import torch
 class ClassificationImageManager(L.LightningDataModule):
 
     def __init__(self, batch_size, num_workers):
@@ -110,25 +111,6 @@ class ClassificationImageManager(L.LightningDataModule):
     def val_dataloader(self):
        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
     
-    def configure_optimizers(self):
-     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-
-     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        patience=3,
-        factor=0.5
-     )
-
-     return {
-        "optimizer": optimizer,
-        "lr_scheduler": {
-            "scheduler": scheduler,
-            "monitor": "val_loss"
-        }
-    }
-
-
 
     def show_images_with_labels(self, dataloader, title="Train Images", num_images=5):
      imgs, labels = next(iter(dataloader))
