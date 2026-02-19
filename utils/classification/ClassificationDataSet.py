@@ -6,7 +6,10 @@ class ClassificationDataSet(Dataset):
     def __init__(self, path, transform=None):
         self.path = path
         self.transform = transform
-        self.image_files = os.listdir(path)  # lista de carpetas dentro de path
+        self.image_files = sorted([
+            f for f in os.listdir(path)
+            if os.path.isdir(os.path.join(path, f))
+        ])[:916]  
 
     def __len__(self):
         return len(self.image_files)
