@@ -11,7 +11,6 @@ from utils.segmentation.SegmentationImageManager import SegmentationImageManager
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 import lightning as L
-
 from ultralytics import YOLO
 
 def main(config_path="configs/config.yaml"):
@@ -23,8 +22,7 @@ def main(config_path="configs/config.yaml"):
     model_name=cfg["model"]["model_name"],
     batch_size = cfg["train"]["batch_size"],
     num_workers = cfg["train"]["num_workers"],
-    num_classes=cfg["model"]["num_classes"],   
-    model_path=cfg["model"]["model_path"]
+    num_classes=cfg["model"]["num_classes"]
     )
 
     early_stop = EarlyStopping(
@@ -33,11 +31,14 @@ def main(config_path="configs/config.yaml"):
     mode="min",
     verbose=True)
 
+    model_path = cfg["model"]["model_path"]
+
     checkpoint = ModelCheckpoint(
     monitor="val_loss",
     mode="min",
     save_top_k=1,
-    filename="best-{epoch:02d}-{val_loss:.4f}"
+    filename="best-{epoch:02d}-{val_loss:.4f}",
+    dirpath= model_path
     )
 
     name_csv = cfg["model"]["model_name"]
@@ -58,7 +59,12 @@ def main(config_path="configs/config.yaml"):
     print("Training..")
     
     trainer.fit(model_manager,datamodule=image_manager)
+
+    print("Testing...")
     trainer.test(model_manager,datamodule=image_manager)
+    best_model_path = checkpoint.best_model_path
+    print(f"✅ Mejor modelo guardado en: {best_model_path}")
+
 
 
 
@@ -70,27 +76,27 @@ def get_model(model_name: str, batch_size,num_workers,num_classes=2, model_path:
     model_name = model_name.lower()
 
     if model_name == 'mobilenetv2':
-        model= MobileNetV2Classifier(num_classes=num_classes, model_path=model_path).getModel()
+        model= MobileNetV2Classifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
         
     elif model_name == 'efficientnetb0':
-        model = EfficientNetB0Classifier(num_classes=num_classes, model_path=model_path).getModel()
+        model = EfficientNetB0Classifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
 
     elif model_name == 'resnet18':
-        model = ResNet18Classifier(num_classes=num_classes, model_path=model_path).getModel()
+        model = ResNet18Classifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
 
     elif model_name == 'vitsmall':
-        model = ViTSmallClassifier(num_classes=num_classes, model_path=model_path).getModel()
+        model = ViTSmallClassifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
     
     elif model_name == 'unetresnet34':
-        model = UNetResNet34Segmenter(model_path=model_path).getModel()
+        model = UNetResNet34Segmenter().getModel()
         image_manager = SegmentationImageManager(batch_size,num_workers)
         model_manager = Segmenter(model)
 
