@@ -55,7 +55,7 @@ class ClassificationImageManager(L.LightningDataModule):
 
        self.train_dataset = ClassificationDataSet(path=os.join(self.main_path,"train"),transform=train_transform)
        self.test_dataset = ClassificationDataSet(path=os.join(self.main_path,"test"),transform=val_transform)
-       self.val_dataset = ClassificationDataSet(path=os.join(self.main_path,"validation"))
+       self.val_dataset = ClassificationDataSet(path=os.join(self.main_path,"validation"),transform=val_transform)
 
 
     def train_dataloader(self):
@@ -69,7 +69,6 @@ class ClassificationImageManager(L.LightningDataModule):
 
        
 
-    
     def prepare_data(self):
        pass
 
@@ -111,20 +110,3 @@ class ClassificationImageManager(L.LightningDataModule):
     def val_dataloader(self):
        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
     
-
-    def show_images_with_labels(self, dataloader, title="Train Images", num_images=5):
-     imgs, labels = next(iter(dataloader))
-
-     plt.figure(figsize=(12, 4))
-     for i in range(min(num_images, len(imgs))):
-        plt.subplot(1, num_images, i + 1)
-
-        img = imgs[i].permute(1, 2, 0).squeeze() if imgs[i].ndim == 3 else imgs[i].squeeze()
-        plt.imshow(img, cmap='gray')
-
-        plt.title(f"Etiqueta: {labels[i]}", fontsize=10)
-        plt.axis('off')
-
-     plt.suptitle(title, fontsize=14)
-     plt.tight_layout()
-     plt.show()
