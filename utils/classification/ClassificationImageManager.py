@@ -69,44 +69,4 @@ class ClassificationImageManager(L.LightningDataModule):
 
        
 
-    def prepare_data(self):
-       pass
-
-    def setup(self,stage=None):
-       image_size = 224
-       brightness= 0.05
-       contrast = 0.05
-       imagenet_mean = [0.485, 0.456, 0.406]
-       imagenet_std = [0.229, 0.224, 0.225] # Transform para entrenamiento
-       train_transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),  # convierte 1 canal → 3 canales
-        transforms.Resize((image_size, image_size)),
-        transforms.RandomApply(
-         [transforms.ColorJitter(brightness=brightness, contrast=contrast)],
-         p=0.5
-        ),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
-        ])
-
-       val_transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),
-        transforms.Resize((image_size, image_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
-        ])
-
-       self.train_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"train"),transform=train_transform)
-       self.test_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"test"))
-       self.val_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"validation"),transform=val_transform)
-
-
-    def train_dataloader(self):
-       return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
-    
-    def test_dataloader(self):
-       return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
-    
-    def val_dataloader(self):
-       return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
     

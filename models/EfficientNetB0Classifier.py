@@ -3,7 +3,7 @@ from torchvision import models
 import torch.nn as nn
 
 class EfficientNetB0Classifier(Model):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes=2):
         super().__init__()
         self.model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1)
             

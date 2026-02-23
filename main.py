@@ -27,7 +27,7 @@ def main(config_path="configs/config.yaml"):
 
     early_stop = EarlyStopping(
     monitor="val_loss",
-    patience=8,
+    patience=15,
     mode="min",
     verbose=True)
 
@@ -49,7 +49,7 @@ def main(config_path="configs/config.yaml"):
     )
 
     trainer = L.Trainer(
-     max_epochs=30,
+     max_epochs=cfg["train"]["epochs"],
      accelerator="auto",
      devices="auto",
      callbacks=[early_stop, checkpoint],
