@@ -1,6 +1,5 @@
 import torch
 import segmentation_models_pytorch as smp
-import os
 from models.Model import Model
 
 class UNetResNet34Segmenter(Model):

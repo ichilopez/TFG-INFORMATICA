@@ -1,8 +1,6 @@
 import timm
-import torch
 import torch.nn as nn
 from models.Model import Model
-import os
 
 class ViTSmallClassifier(Model):
     def __init__(self,num_classes=2):

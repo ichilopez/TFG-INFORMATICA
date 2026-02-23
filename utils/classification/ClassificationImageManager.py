@@ -53,9 +53,9 @@ class ClassificationImageManager(L.LightningDataModule):
         transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
 
-       self.train_dataset = ClassificationDataSet(path=os.join(self.main_path,"train"),transform=train_transform)
-       self.test_dataset = ClassificationDataSet(path=os.join(self.main_path,"test"),transform=val_transform)
-       self.val_dataset = ClassificationDataSet(path=os.join(self.main_path,"validation"),transform=val_transform)
+       self.train_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"train"),transform=train_transform)
+       self.test_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"test"),transform=val_transform)
+       self.val_dataset = ClassificationDataSet(path=os.path.join(self.main_path,"validation"),transform=val_transform)
 
 
     def train_dataloader(self):
