@@ -30,7 +30,24 @@ class Classifier(L.LightningModule):
     
 
     def configure_optimizers(self):
-     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+
+     backbone_params = []
+     classifier_params = []
+
+     for name, param in self.model.named_parameters():
+         if param.requires_grad:
+             if "features" in name:
+                 backbone_params.append(param)
+             else:
+                 classifier_params.append(param)
+
+     optimizer = torch.optim.AdamW(
+         [
+             {"params": backbone_params, "lr": 1e-4},
+             {"params": classifier_params, "lr": 1e-3},
+         ],
+         weight_decay=1e-4
+     )
 
      scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -45,7 +62,7 @@ class Classifier(L.LightningModule):
             "scheduler": scheduler,
             "monitor": "val_loss"
         }
-    }
+     }
     
     def validation_step(self, batch, batch_idx):
         x, y = batch

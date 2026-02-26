@@ -9,6 +9,9 @@ class ViTSmallClassifier(Model):
 
         for param in self.model.parameters():
             param.requires_grad = False
+            
+        for param in self.model.features[-2:].parameters():
+            param.requires_grad = True
 
         in_features = self.model.head.in_features
         self.model.head = nn.Linear(in_features, num_classes)
