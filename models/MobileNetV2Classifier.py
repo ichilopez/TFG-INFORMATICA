@@ -10,13 +10,17 @@ class MobileNetV2Classifier(Model):
         
         for param in self.model.parameters():
             param.requires_grad = False
-            
-        for param in self.model.features[-2:].parameters():
-            param.requires_grad = True
-        
+
         in_features = self.model.classifier[1].in_features
-        self.model.classifier[1] = nn.Linear(in_features, num_classes) 
-        
+        self.model.classifier = nn.Sequential(
+            nn.Dropout(0.4),
+            nn.Linear(in_features, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.3),
+            nn.Linear(256, num_classes)
+        )
+ 
     
     def getModel(self):
         return self.model

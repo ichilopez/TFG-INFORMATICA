@@ -35,13 +35,13 @@ class ClassificationImageManager(L.LightningDataModule):
        contrast = 0.05
        imagenet_mean = [0.485, 0.456, 0.406]
        imagenet_std = [0.229, 0.224, 0.225] # Transform para entrenamiento
+
        train_transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),  # convierte 1 canal → 3 canales
-        transforms.Resize((image_size, image_size)),
-        transforms.RandomApply(
-         [transforms.ColorJitter(brightness=brightness, contrast=contrast)],
-         p=0.5
-        ),
+        transforms.Grayscale(num_output_channels=3),        # 1 → 3 canales
+        transforms.RandomResizedCrop(image_size, scale=(0.8, 1.0)),  # recorte y resize aleatorio
+        transforms.RandomHorizontalFlip(p=0.5),            # voltea horizontalmente
+        transforms.RandomRotation(20),                     # rota ±20°
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),  # jitter siempre
         transforms.ToTensor(),
         transforms.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
