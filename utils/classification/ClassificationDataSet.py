@@ -9,31 +9,28 @@ class ClassificationDataSet(Dataset):
         self.image_files = sorted([
             f for f in os.listdir(path)
             if os.path.isdir(os.path.join(path, f))
-        ])[:916]  
+        ])[:916]
 
     def __len__(self):
         return len(self.image_files)
 
     def __getitem__(self, idx):
-        # ruta completa a la carpeta del caso
         img_folder = os.path.join(self.path, self.image_files[idx])
-
-        # ruta a la imagen y al label
         img_path = os.path.join(img_folder, "1.jpeg")
-
         label_path = os.path.join(img_folder, "pathology.txt")
 
+        img = Image.open(img_path).convert("L")  # convertir a grayscale
 
-        img = Image.open(img_path).convert("RGB")
         if self.transform is not None:
             img = self.transform(img)
 
         with open(label_path, "r") as f:
-          word = f.readline().strip().upper()
-          if word == "BENIGN":
-           label = 0
-          elif word == "MALIGNANT":
-           label = 1
-          else:
-           raise ValueError(f"Etiqueta desconocida en {label_path}: {word}")
+            word = f.readline().strip().upper()
+            if word == "BENIGN":
+                label = 0
+            elif word == "MALIGNANT":
+                label = 1
+            else:
+                raise ValueError(f"Etiqueta desconocida en {label_path}: {word}")
+
         return img, label
