@@ -4,15 +4,14 @@ import torchmetrics
 import lightning as L
 
 class Classifier(L.LightningModule):
-    def __init__(self, model, lr=1e-3):
+    def __init__(self, model):
         super().__init__()
         self.loss_fn = nn.CrossEntropyLoss()
         self.model = model
-        self.lr = lr
-        self.test_accuracy = torchmetrics.Accuracy(task='binary', num_classes=2)
-        self.test_precision = torchmetrics.Precision(num_classes=2, task='binary', average='macro')
-        self.test_recall = torchmetrics.Recall(num_classes=2, task='binary', average='macro')
-        self.test_f1 = torchmetrics.F1Score(num_classes=2, task='binary', average='macro')
+        self.test_accuracy = torchmetrics.Accuracy(task='binary')
+        self.test_precision = torchmetrics.Precision( task='binary')
+        self.test_recall = torchmetrics.Recall(task='binary')
+        self.test_f1 = torchmetrics.F1Score(task='binary')
         self.prepare_data_per_node = False 
 
     def forward(self, x):
@@ -22,7 +21,12 @@ class Classifier(L.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.loss_fn(logits, y)
-        self.log("train_loss", loss)
+        probs = torch.softmax(logits, dim=1)[:, 1]
+        preds = (probs > 0.5).long()
+        acc = self.train_acc(preds, y)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_acc", acc, prog_bar=True)
+
         return loss
 
     def configure_optimizers(self):
@@ -63,13 +67,21 @@ class Classifier(L.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.loss_fn(logits, y)
+        probs = torch.softmax(logits, dim=1)[:, 1]
+        preds = (probs > 0.5).long()
+
+        acc = self.val_acc(preds, y)
+
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", acc, prog_bar=True)
         self.log("val_loss", loss)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
         loss = self.loss_fn(logits, y)
-        preds = logits.argmax(dim=1)
+        probs = torch.softmax(logits, dim=1)[:, 1]
+        preds = (probs > 0.5).long()
         self.log("test_loss", loss, prog_bar=True)
         acc = self.test_accuracy(preds, y)
         precision = self.test_precision(preds, y)

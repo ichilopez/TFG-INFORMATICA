@@ -25,24 +25,24 @@ class ClassificationImageManager(L.LightningDataModule):
         image_size = 224
         brightness = 0.05
         contrast = 0.05
-        gray_mean = [0.5]
-        gray_std = [0.5]
+        mean=[0.485, 0.456, 0.406]
+        std=[0.229, 0.224, 0.225]
 
         train_transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1),
+            transforms.Grayscale(num_output_channels=3),
             transforms.RandomResizedCrop(image_size, scale=(0.8, 1.0)),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(20),
+            transforms.RandomRotation(10),
             transforms.ColorJitter(brightness=brightness, contrast=contrast),
             transforms.ToTensor(),
-            transforms.Normalize(mean=gray_mean, std=gray_std)
+            transforms.Normalize(mean=mean, std=std)
         ])
 
         val_transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1),
+            transforms.Grayscale(num_output_channels=3),
             transforms.Resize((image_size, image_size)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=gray_mean, std=gray_std)
+            transforms.Normalize(mean=mean, std=std)
         ])
 
         self.train_dataset = ClassificationDataSet(
