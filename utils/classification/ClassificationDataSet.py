@@ -6,24 +6,34 @@ class ClassificationDataSet(Dataset):
     def __init__(self, path, transform=None):
         self.path = path
         self.transform = transform
-        self.image_files = sorted([
+        # Obtenemos todas las subcarpetas ordenadas
+        self.image_folders = sorted([
             f for f in os.listdir(path)
             if os.path.isdir(os.path.join(path, f))
-        ])[:916]
+        ])
 
     def __len__(self):
-        return len(self.image_files)
+        return len(self.image_folders)
 
     def __getitem__(self, idx):
-        img_folder = os.path.join(self.path, self.image_files[idx])
-        img_path = os.path.join(img_folder, "1.jpeg")
+        img_folder = os.path.join(self.path, self.image_folders[idx])
+        
+        # Seleccionamos la imagen según el índice
+        if idx < 923:
+            img_name = "1.jpeg"
+        else:
+            img_name = "1_aug.jpeg"
+            
+        img_path = os.path.join(img_folder, img_name)
         label_path = os.path.join(img_folder, "pathology.txt")
 
-        img = Image.open(img_path).convert("L")  # convertir a grayscale
+        # Cargar imagen en grayscale
+        img = Image.open(img_path).convert("L")
 
         if self.transform is not None:
             img = self.transform(img)
 
+        # Leer etiqueta
         with open(label_path, "r") as f:
             word = f.readline().strip().upper()
             if word == "BENIGN":

@@ -78,7 +78,7 @@ def get_model(model_name: str, batch_size,num_workers,num_classes=2, model_path:
     if model_name == 'mobilenetv2':
         model= MobileNetV2Classifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
-        model_manager = Classifier(model)
+        model_manager = Classifier(model,threshold=0.34)
         
     elif model_name == 'efficientnetb0':
         model = EfficientNetB0Classifier().getModel()
