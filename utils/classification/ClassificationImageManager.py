@@ -41,7 +41,7 @@ class ClassificationImageManager(L.LightningDataModule):
         self.prepare_data_per_node = False 
 
     def setup(self, stage=None):
-        image_size = 224
+        image_size = 448
         # Medias y desviaciones estándar de ImageNet (necesarias para pesos pre-entrenados)
         mean = [0.485, 0.456, 0.406]
         std = [0.229, 0.224, 0.225]

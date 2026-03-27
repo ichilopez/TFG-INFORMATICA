@@ -21,7 +21,7 @@ class MobileNetV2Classifier(Model):
         self.attention = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, in_channels // 16, 1),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Conv2d(in_channels // 16, in_channels, 1),
             nn.Sigmoid()
         )
@@ -33,7 +33,7 @@ class MobileNetV2Classifier(Model):
             nn.Dropout(0.4),
             nn.Linear(in_channels, 256),
             nn.BatchNorm1d(256),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Dropout(0.3),
             nn.Linear(256, num_classes)
         )

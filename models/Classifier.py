@@ -72,7 +72,8 @@ class Classifier(L.LightningModule):
         # 2️⃣ Learning Rate Diferencial: LR más bajo para la base, más alto para la cabeza
         # Esto asume que tu modelo tiene los atributos .features y .classifier (como MobileNet/EfficientNet)
         optimizer = torch.optim.AdamW([
-            {'params': self.model.features.parameters(), 'lr': 1e-5}, 
+            {'params': self.model.features.parameters(), 'lr': 1e-5},
+            {'params': self.model.attention.parameters(), 'lr': 1e-4}, 
             {'params': self.model.classifier.parameters(), 'lr': 1e-4}
         ], weight_decay=0.05) # 3️⃣ Weight decay aumentado para regularizar
 

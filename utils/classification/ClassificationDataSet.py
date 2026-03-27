@@ -7,23 +7,18 @@ class ClassificationDataSet(Dataset):
         self.path = path
         self.transform = transform
         # Obtenemos todas las subcarpetas ordenadas
-        self.image_folders = sorted([
+        all_folders = sorted([
             f for f in os.listdir(path)
             if os.path.isdir(os.path.join(path, f))
         ])
+        self.image_folders = all_folders[:923]
 
     def __len__(self):
         return len(self.image_folders)
 
     def __getitem__(self, idx):
         img_folder = os.path.join(self.path, self.image_folders[idx])
-        
-        # Seleccionamos la imagen según el índice
-        if idx < 923:
-            img_name = "1.jpeg"
-        else:
-            img_name = "1_aug.jpeg"
-            
+        img_name = "1.jpeg"
         img_path = os.path.join(img_folder, img_name)
         label_path = os.path.join(img_folder, "pathology.txt")
 
