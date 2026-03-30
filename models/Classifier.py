@@ -9,7 +9,7 @@ class Classifier(L.LightningModule):
         self.model = model
         
         # 1️⃣ Loss con Label Smoothing para mejorar la generalización (evita overfitting)
-        self.loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1)
+        self.loss_fn = nn.CrossEntropyLoss(weight=torch.tensor([1.0,2.0]),label_smoothing=0.1)
         
         self.threshold = threshold
         self.prepare_data_per_node = False
@@ -73,7 +73,6 @@ class Classifier(L.LightningModule):
         # Esto asume que tu modelo tiene los atributos .features y .classifier (como MobileNet/EfficientNet)
         optimizer = torch.optim.AdamW([
             {'params': self.model.features.parameters(), 'lr': 1e-5},
-            {'params': self.model.attention.parameters(), 'lr': 1e-4}, 
             {'params': self.model.classifier.parameters(), 'lr': 1e-4}
         ], weight_decay=0.05) # 3️⃣ Weight decay aumentado para regularizar
 

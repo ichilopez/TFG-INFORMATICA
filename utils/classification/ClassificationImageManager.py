@@ -63,7 +63,7 @@ class ClassificationImageManager(L.LightningDataModule):
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5), # Crucial: la lesión no tiene "arriba" fijo
             transforms.RandomRotation(15),         # Rotaciones leves para robustez
-            
+            transforms.RandomResizedCrop(size=(image_size, image_size),scale=(0.6,1.0)),
             # 5. Aumento de contraste/brillo más realista (0.2 en lugar de 0.05)
             transforms.ColorJitter(brightness=0.2, contrast=0.2),
             
