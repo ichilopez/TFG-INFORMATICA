@@ -1,32 +1,35 @@
 from models.Model import Model
 from torchvision import models
+import torch
 import torch.nn as nn
 
 class MobileNetV2Classifier(Model):
     def __init__(self, num_classes=2):
         super().__init__()
-        # Cargar el base model
+
+        # Backbone
         base_model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
         self.features = base_model.features
 
-        # 1. Congelar y descongelar (tu lógica actual)
+        # Congelar casi todo y descongelar últimos bloques
         for param in self.features.parameters():
             param.requires_grad = False
+
         for i in range(16, len(self.features)):
             for param in self.features[i].parameters():
                 param.requires_grad = True
 
-        # 2. Bloque de Atención SE (Squeeze-and-Excitation)
-        in_channels = 1280  # MobileNetV2 termina en 1280 canales
+        # Bloque de Atención SE
+        in_channels = 1280
         self.attention = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels, in_channels // 16, 1),
+            nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
             nn.SiLU(),
-            nn.Conv2d(in_channels // 16, in_channels, 1),
+            nn.Conv2d(in_channels // 16, in_channels, kernel_size=1),
             nn.Sigmoid()
         )
 
-        # 3. Cabeza Clasificadora mejorada
+        # Clasificador unimodal
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
@@ -38,14 +41,18 @@ class MobileNetV2Classifier(Model):
             nn.Linear(256, num_classes)
         )
 
-    def forward(self, x):
+    def forward(self, x, meta=None):
+        # meta se ignora en el modelo unimodal
         x = self.features(x)
-        # Aplicamos atención: multiplicamos los canales por su importancia calculada
-        atencion = self.attention(x)
-        x = x * atencion 
+
+        attention = self.attention(x)
+        x = x * attention
+
         x = self.classifier(x)
         return x
 
     def getModel(self):
-        # Ahora devolvemos 'self' porque este objeto es el nn.Module completo
         return self
+
+    def save(self, path):
+        torch.save(self.state_dict(), path)

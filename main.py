@@ -1,9 +1,13 @@
 import yaml
 from models.EfficientNetB0Classifier import EfficientNetB0Classifier
+from models.EfficientNetB0ClassifierMultimodal import EfficientNetB0ClassifierMultimodal
 from models.MobileNetV2Classifier import MobileNetV2Classifier
+from models.MobileNetV2ClassifierMultimodal import MobileNetV2ClassifierMultimodal
 from models.ResNet18Classifier import ResNet18Classifier
+from models.ResNet18ClassifierMultimodal import ResNet18ClassifierMultimodal
 from models.UNetResNet34Segmenter import UNetResNet34Segmenter
 from  models.ViTSmallClassifier import ViTSmallClassifier
+from  models.ViTSmallClassifierMultimodal import ViTSmallClassifierMultimodal
 from  models.Classifier import Classifier
 from  models.Segmenter import Segmenter
 from utils.classification.ClassificationImageManager import ClassificationImageManager
@@ -58,10 +62,19 @@ def main(config_path="configs/config.yaml"):
     
     print("Training..")
     
-    trainer.fit(model_manager,datamodule=image_manager)
+    trainer.fit(model_manager, datamodule=image_manager)
 
-    print("Testing...")
-    trainer.test(model_manager,datamodule=image_manager)
+    # Ajustar umbral con validación
+    best_metrics = model_manager.tune_threshold(
+     image_manager.val_dataloader(),
+     mode="precision_at_recall",
+     min_recall=0.70
+    )
+
+    print("Umbral ajustado:", model_manager.threshold)
+    print("Métricas de validación:", best_metrics)
+
+    trainer.test(model_manager, datamodule=image_manager)
     best_model_path = checkpoint.best_model_path
     print(f"✅ Mejor modelo guardado en: {best_model_path}")
 
@@ -79,9 +92,19 @@ def get_model(model_name: str, batch_size,num_workers,num_classes=2, model_path:
         model= MobileNetV2Classifier().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
+
+    elif model_name == 'mobilenetv2_multi':
+        model= MobileNetV2ClassifierMultimodal().getModel()
+        image_manager = ClassificationImageManager(batch_size,num_workers)
+        model_manager = Classifier(model)
         
     elif model_name == 'efficientnetb0':
         model = EfficientNetB0Classifier().getModel()
+        image_manager = ClassificationImageManager(batch_size,num_workers)
+        model_manager = Classifier(model)
+
+    elif model_name == 'efficientnetb0_multi':
+        model = EfficientNetB0ClassifierMultimodal().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
 
@@ -90,8 +113,18 @@ def get_model(model_name: str, batch_size,num_workers,num_classes=2, model_path:
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
 
+    elif model_name == 'resnet18_multi':
+        model = ResNet18ClassifierMultimodal().getModel()
+        image_manager = ClassificationImageManager(batch_size,num_workers)
+        model_manager = Classifier(model)
+
     elif model_name == 'vitsmall':
         model = ViTSmallClassifier().getModel()
+        image_manager = ClassificationImageManager(batch_size,num_workers)
+        model_manager = Classifier(model)
+    
+    elif model_name == 'vitsmall_multi':
+        model = ViTSmallClassifierMultimodal().getModel()
         image_manager = ClassificationImageManager(batch_size,num_workers)
         model_manager = Classifier(model)
     

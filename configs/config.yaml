@@ -9,7 +9,7 @@ data:
   main_path: "/content/drive/MyDrive/TFG/datos"
 
 model:
-   model_name: "mobilenetv2" # mobilenetv2,efficientnetb0,yolo,resnet18,vitsmall,unetresnet34
+   model_name: "mobilenetv2" # mobilenetv2,mobilenetv2_multi,efficientnetb0,efficientnetb0_multi,yolo,resnet18,resnet18_multi,vitsmall,vitsmall_multi,unetresnet34
    model_path: null #donde se guarda el modelo
    num_classes : 2
 

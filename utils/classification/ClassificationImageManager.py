@@ -25,7 +25,7 @@ class ApplyCLAHE(object):
         img_clahe = clahe.apply(img_np)
         return Image.fromarray(img_clahe)
 
-# --- CLASE PRINCIPAL REESCRITA ---
+
 class ClassificationImageManager(L.LightningDataModule):
     def __init__(self, batch_size, num_workers):
         super().__init__()
@@ -46,34 +46,19 @@ class ClassificationImageManager(L.LightningDataModule):
         mean = [0.485, 0.456, 0.406]
         std = [0.229, 0.224, 0.225]
 
-        # TRANSFORMACIONES DE ENTRENAMIENTO (TRAIN)
-        # Optimizadas para recortes: no recortamos la imagen, aumentamos variabilidad.
         self.train_transform = transforms.Compose([
-            # 1. Aseguramos escala de grises y aplicamos CLAHE
-            transforms.Grayscale(num_output_channels=1),
-            ApplyCLAHE(clip_limit=2.0),
-            
-            # 2. Volvemos a 3 canales (exigencia de MobileNetV2)
-            transforms.Grayscale(num_output_channels=3),
-            
-            # 3. Resize fijo: Evita perder la morfología de los bordes de la lesión
-            transforms.Resize((image_size, image_size)),
-            
-            # 4. Aumentos geométricos potentes para recortes médicos
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomVerticalFlip(p=0.5), # Crucial: la lesión no tiene "arriba" fijo
-            transforms.RandomRotation(15),         # Rotaciones leves para robustez
-            transforms.RandomResizedCrop(size=(image_size, image_size),scale=(0.6,1.0)),
-            # 5. Aumento de contraste/brillo más realista (0.2 en lugar de 0.05)
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            
-            # 6. Normalización
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
+          transforms.Grayscale(num_output_channels=1),
+          ApplyCLAHE(clip_limit=2.0),
+          transforms.Grayscale(num_output_channels=3),
+          transforms.Resize((256, 256)),
+          transforms.RandomHorizontalFlip(p=0.5),
+          transforms.RandomRotation(10),
+          transforms.RandomAffine(degrees=0, translate=(0.03, 0.03), scale=(0.95, 1.05)),
+          transforms.ColorJitter(brightness=0.15, contrast=0.15),
+          transforms.ToTensor(),
+          transforms.Normalize(mean=mean, std=std)
         ])
 
-        # TRANSFORMACIONES DE VALIDACIÓN Y TEST
-        # Deben ser idénticas al pre-procesado de train pero sin aumentos aleatorios
         self.val_transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             ApplyCLAHE(clip_limit=2.0),
