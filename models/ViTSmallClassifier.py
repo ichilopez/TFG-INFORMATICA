@@ -10,7 +10,8 @@ class ViTSmallClassifier(Model):
         self.model = timm.create_model(
             'vit_small_patch16_224',
             pretrained=True,
-            num_classes=num_classes
+            num_classes=num_classes,
+            img_size=256
         )
 
         # Congelar todo
