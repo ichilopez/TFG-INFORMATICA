@@ -16,6 +16,7 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 import lightning as L
 from ultralytics import YOLO
+import torch
 
 def main(config_path="configs/config.yaml"):
     with open(config_path, "r") as f:
@@ -31,7 +32,7 @@ def main(config_path="configs/config.yaml"):
 
     early_stop = EarlyStopping(
     monitor="val_loss",
-    patience=15,
+    patience=10,
     mode="min",
     verbose=True)
 
@@ -64,19 +65,16 @@ def main(config_path="configs/config.yaml"):
     
     trainer.fit(model_manager, datamodule=image_manager)
 
-    # Ajustar umbral con validación
+    best_path = checkpoint.best_model_path
+    ckpt = torch.load(best_path, map_location="cpu")
+    model_manager.load_state_dict(ckpt["state_dict"])
+
     best_metrics = model_manager.tune_threshold(
-     image_manager.val_dataloader(),
-     mode="precision_at_recall",
-     min_recall=0.70
+    image_manager.val_dataloader(),
+    mode="precision_at_recall",
+    min_recall=0.70
     )
-
-    print("Umbral ajustado:", model_manager.threshold)
-    print("Métricas de validación:", best_metrics)
-
     trainer.test(model_manager, datamodule=image_manager)
-    best_model_path = checkpoint.best_model_path
-    print(f"✅ Mejor modelo guardado en: {best_model_path}")
 
 
 

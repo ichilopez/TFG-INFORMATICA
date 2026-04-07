@@ -11,11 +11,11 @@ class EfficientNetB0ClassifierMultimodal(Model):
             weights=models.EfficientNet_B0_Weights.DEFAULT
         )
 
-        # Congelar casi todo
+        # Congelamos casi todo
         for p in backbone.parameters():
             p.requires_grad = False
 
-        # Descongelar últimos bloques
+        # Descongelamos últimos bloques
         for p in backbone.features[-2:].parameters():
             p.requires_grad = True
 

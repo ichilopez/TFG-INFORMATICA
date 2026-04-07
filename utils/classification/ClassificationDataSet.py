@@ -12,7 +12,7 @@ class ClassificationDataSet(Dataset):
             f for f in os.listdir(path)
             if os.path.isdir(os.path.join(path, f))
         ])
-        self.image_folders = all_folders[:923]
+        self.image_folders = all_folders[:916]
 
     def __len__(self):
         return len(self.image_folders)
