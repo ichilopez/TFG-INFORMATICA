@@ -13,9 +13,12 @@ class UNetResNet34Segmenter(Model):
             in_channels=3,
             classes=1,
             activation=None
-        ).to(self.device)
+        )
 
         for param in self.model.encoder.parameters():
+         param.requires_grad = False
+
+        for param in self.model.encoder.layer4.parameters():
             param.requires_grad = False
         print("Encoder congelado.")
 

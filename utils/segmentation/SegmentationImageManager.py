@@ -8,8 +8,7 @@ import os
 
 
 class SegmentationImageManager(L.LightningDataModule):
-
-    def __init__(self, batch_size, num_workers):
+    def __init__(self, batch_size, num_workers, image_size=(256, 256)):
         super().__init__()
 
         self.save_hyperparameters()
@@ -20,46 +19,92 @@ class SegmentationImageManager(L.LightningDataModule):
         self.main_path = self.cfg["data"]["main_path"]
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.prepare_data_per_node = False 
+        self.image_size = image_size
+        self.prepare_data_per_node = False
 
     def prepare_data(self):
-       pass
+        pass
 
-    def setup(self,stage=None):
-        train_dataset = SegmentationDataset(images_path=os.path.join(self.main_path,"train"))
-        val_dataset = SegmentationDataset(images_path=os.path.join(self.main_path,"validation"))
-        test_dataset = SegmentationDataset(images_path=os.path.join(self.main_path,"train"))
-        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
-        self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
-        self.val_loader = DataLoader(val_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+    def setup(self, stage=None):
+        self.train_transform = A.Compose([
+            A.Resize(height=self.image_size[0], width=self.image_size[1]),
+            A.HorizontalFlip(p=0.5),
+            A.VerticalFlip(p=0.1),
+            A.Rotate(limit=10, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+            A.Affine(
+                scale=(0.95, 1.05),
+                translate_percent=(-0.03, 0.03),
+                rotate=0,
+                shear=0,
+                border_mode=cv2.BORDER_CONSTANT,
+                p=0.5
+            ),
+            A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.5),
+            A.RandomBrightnessContrast(
+                brightness_limit=0.15,
+                contrast_limit=0.15,
+                p=0.5
+            ),
+            A.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225)
+            ),
+            ToTensorV2()
+        ])
+
+        self.eval_transform = A.Compose([
+            A.Resize(height=self.image_size[0], width=self.image_size[1]),
+            A.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225)
+            ),
+            ToTensorV2()
+        ])
+
+        self.train_dataset = SegmentationDataset(
+            images_path=os.path.join(self.main_path, "train"),
+            transform=self.train_transform,
+            image_size=self.image_size
+        )
+
+        self.val_dataset = SegmentationDataset(
+            images_path=os.path.join(self.main_path, "validation"),
+            transform=self.eval_transform,
+            image_size=self.image_size
+        )
+
+        self.test_dataset = SegmentationDataset(
+            images_path=os.path.join(self.main_path, "test"),
+            transform=self.eval_transform,
+            image_size=self.image_size
+        )
 
     def train_dataloader(self):
-        return self.train_loader
-    
-    def test_dataloader(self):
-        return self.test_loader
-    
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=True
+        )
+
     def val_dataloader(self):
-        return self.val_loader
-    
-    def configure_optimizers(self):
-     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True
+        )
 
-     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        patience=3,
-        factor=0.5
-     )
-
-     return {
-        "optimizer": optimizer,
-        "lr_scheduler": {
-            "scheduler": scheduler,
-            "monitor": "val_loss"
-        }
-     }
-
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True
+        )
 
 
 
