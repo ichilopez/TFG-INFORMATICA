@@ -37,6 +37,9 @@ class Classifier(L.LightningModule):
         self.test_recall = torchmetrics.Recall(task="binary")
         self.test_f1 = torchmetrics.F1Score(task="binary")
 
+        # Para guardar métricas del threshold ajustado
+        self.tuned_val_metrics = None
+
     def forward(self, x, meta=None):
         return self.model(x, meta)
 
@@ -115,86 +118,134 @@ class Classifier(L.LightningModule):
 
     @torch.no_grad()
     def tune_threshold(self, dataloader, mode="f1", min_recall=0.70):
-     self.eval()
+        """
+        Ajusta el umbral usando validación.
 
-     all_probs = []
-     all_targets = []
+        mode:
+          - 'f1': maximiza F1
+          - 'precision_at_recall': maximiza precisión con recall >= min_recall
 
-     for batch in dataloader:
-        x, meta, y = self._unpack_batch(batch)
+        Además:
+          - imprime el threshold escogido
+          - imprime las métricas de validación con ese threshold
+          - intenta registrarlas en el logger de Lightning si existe
+        """
+        self.eval()
 
-        x = x.to(self.device)
-        meta = meta.to(self.device)
-        y = y.to(self.device)
+        all_probs = []
+        all_targets = []
 
-        logits = self(x, meta)
-        probs = torch.softmax(logits, dim=1)[:, 1]
+        for batch in dataloader:
+            x, meta, y = self._unpack_batch(batch)
 
-        all_probs.append(probs.detach().cpu())
-        all_targets.append(y.detach().cpu())
+            x = x.to(self.device)
+            meta = meta.to(self.device)
+            y = y.to(self.device)
 
-     all_probs = torch.cat(all_probs)
-     all_targets = torch.cat(all_targets)
+            logits = self(x, meta)
+            probs = torch.softmax(logits, dim=1)[:, 1]
 
-     thresholds = torch.arange(0.05, 0.96, 0.01)
+            all_probs.append(probs.detach().cpu())
+            all_targets.append(y.detach().cpu())
 
-     best_metrics = None
-     eps = 1e-12
+        all_probs = torch.cat(all_probs)
+        all_targets = torch.cat(all_targets)
 
-     for thr in thresholds:
-        preds = (all_probs >= thr).long()
+        thresholds = torch.arange(0.05, 0.96, 0.01)
 
-        tp = ((preds == 1) & (all_targets == 1)).sum().item()
-        fp = ((preds == 1) & (all_targets == 0)).sum().item()
-        fn = ((preds == 0) & (all_targets == 1)).sum().item()
+        best_metrics = None
+        eps = 1e-12
 
-        precision = tp / (tp + fp + 1e-8)
-        recall = tp / (tp + fn + 1e-8)
-        f1 = 2 * precision * recall / (precision + recall + 1e-8)
+        for thr in thresholds:
+            preds = (all_probs >= thr).long()
 
-        current = {
-            "threshold": float(thr.item()),
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
+            tp = ((preds == 1) & (all_targets == 1)).sum().item()
+            tn = ((preds == 0) & (all_targets == 0)).sum().item()
+            fp = ((preds == 1) & (all_targets == 0)).sum().item()
+            fn = ((preds == 0) & (all_targets == 1)).sum().item()
+
+            precision = tp / (tp + fp + 1e-8)
+            recall = tp / (tp + fn + 1e-8)
+            f1 = 2 * precision * recall / (precision + recall + 1e-8)
+            acc = (tp + tn) / (tp + tn + fp + fn + 1e-8)
+
+            current = {
+                "threshold": float(thr.item()),
+                "accuracy": acc,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+            }
+
+            if mode == "f1":
+                if (
+                    best_metrics is None
+                    or current["f1"] > best_metrics["f1"] + eps
+                    or (
+                        abs(current["f1"] - best_metrics["f1"]) <= eps
+                        and current["threshold"] > best_metrics["threshold"]
+                    )
+                ):
+                    best_metrics = current
+
+            elif mode == "precision_at_recall":
+                if recall < min_recall:
+                    continue
+
+                if (
+                    best_metrics is None
+                    or current["precision"] > best_metrics["precision"] + eps
+                    or (
+                        abs(current["precision"] - best_metrics["precision"]) <= eps
+                        and current["f1"] > best_metrics["f1"] + eps
+                    )
+                    or (
+                        abs(current["precision"] - best_metrics["precision"]) <= eps
+                        and abs(current["f1"] - best_metrics["f1"]) <= eps
+                        and current["threshold"] > best_metrics["threshold"]
+                    )
+                ):
+                    best_metrics = current
+            else:
+                raise ValueError("mode debe ser 'f1' o 'precision_at_recall'")
+
+        if best_metrics is None:
+            raise RuntimeError(
+                f"Ningún threshold alcanzó recall >= {min_recall:.2f}"
+            )
+
+        self.threshold = best_metrics["threshold"]
+        self.tuned_val_metrics = {
+            "mode": mode,
+            "threshold": best_metrics["threshold"],
+            "val_accuracy_at_tuned_threshold": best_metrics["accuracy"],
+            "val_precision_at_tuned_threshold": best_metrics["precision"],
+            "val_recall_at_tuned_threshold": best_metrics["recall"],
+            "val_f1_at_tuned_threshold": best_metrics["f1"],
         }
 
-        if mode == "f1":
-            if (
-                best_metrics is None
-                or current["f1"] > best_metrics["f1"] + eps
-                or (
-                    abs(current["f1"] - best_metrics["f1"]) <= eps
-                    and current["threshold"] > best_metrics["threshold"]
-                )
-            ):
-                best_metrics = current
-
-        elif mode == "precision_at_recall":
-            if recall < min_recall:
-                continue
-
-            if (
-                best_metrics is None
-                or current["precision"] > best_metrics["precision"] + eps
-                or (
-                    abs(current["precision"] - best_metrics["precision"]) <= eps
-                    and current["f1"] > best_metrics["f1"] + eps
-                )
-                or (
-                    abs(current["precision"] - best_metrics["precision"]) <= eps
-                    and abs(current["f1"] - best_metrics["f1"]) <= eps
-                    and current["threshold"] > best_metrics["threshold"]
-                )
-            ):
-                best_metrics = current
-        else:
-            raise ValueError("mode debe ser 'f1' o 'precision_at_recall'")
-
-     if best_metrics is None:
-        raise RuntimeError(
-            f"Ningún threshold alcanzó recall >= {min_recall:.2f}"
+        print(
+            f"[tune_threshold] mode={mode} | "
+            f"threshold={self.threshold:.2f} | "
+            f"val_acc={best_metrics['accuracy']:.4f} | "
+            f"val_precision={best_metrics['precision']:.4f} | "
+            f"val_recall={best_metrics['recall']:.4f} | "
+            f"val_f1={best_metrics['f1']:.4f}"
         )
 
-     self.threshold = best_metrics["threshold"]
-     return best_metrics
+        if self.logger is not None:
+            try:
+                self.logger.log_metrics(
+                    {
+                        "tuned_threshold": self.threshold,
+                        "val_acc_at_tuned_threshold": best_metrics["accuracy"],
+                        "val_precision_at_tuned_threshold": best_metrics["precision"],
+                        "val_recall_at_tuned_threshold": best_metrics["recall"],
+                        "val_f1_at_tuned_threshold": best_metrics["f1"],
+                    },
+                    step=self.current_epoch
+                )
+            except Exception:
+                pass
+
+        return self.tuned_val_metrics
