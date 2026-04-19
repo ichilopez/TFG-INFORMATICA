@@ -9,8 +9,27 @@ data:
   main_path: "/content/drive/MyDrive/TFG/datos"
 
 model:
-   model_name: "mobilenetv2" # mobilenetv2,mobilenetv2_multi,efficientnetb0,efficientnetb0_multi,yolo,resnet18,resnet18_multi,vitsmall,vitsmall_multi,unetresnet34
+   model_name: "mobilenetv2" # mobilenetv2,mobilenetv2_multi,efficientnetb0,efficientnetb0_multi,yolo,resnet18,resnet18_multi,vitsmall,vitsmall_multi,unetresnet34,ensemble
    model_path: null #donde se guarda el modelo
    num_classes : 2
+
+
+ensemble:
+  members:
+    - model_name: vitsmall
+      ckpt_path: "/content/drive/MyDrive/TFG/checkpoints/vitsmall.ckpt"
+      weight: 0.5
+
+    - model_name: efficientnetb0_multi
+      ckpt_path: "/content/drive/MyDrive/TFG/checkpoints/efficientnetb0_multi.ckpt"
+      weight: 0.3
+
+    - model_name: resnet18_multi
+      ckpt_path: "/content/drive/MyDrive/TFG/checkpoints/resnet18_multi.ckpt"
+      weight: 0.2
+
+  tune_threshold: true
+  threshold_mode: "precision_at_recall"
+  min_recall: 0.60
 
 
