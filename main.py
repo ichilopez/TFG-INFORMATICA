@@ -1,4 +1,3 @@
-import os
 import yaml
 import torch
 import lightning as L
@@ -22,17 +21,6 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
 
-def save_model_with_threshold(model_manager, save_path, threshold=None, extra_metrics=None):
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-    payload = {
-        "state_dict": model_manager.state_dict(),
-        "threshold": threshold if threshold is not None else getattr(model_manager, "threshold", None),
-        "extra_metrics": extra_metrics
-    }
-    torch.save(payload, save_path)
-
-
 def main(config_path="configs/config.yaml"):
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
@@ -52,7 +40,6 @@ def main(config_path="configs/config.yaml"):
     )
 
     model_path = cfg["model"]["model_path"]
-    os.makedirs(model_path, exist_ok=True)
 
     checkpoint = ModelCheckpoint(
         monitor="val_loss",
@@ -89,25 +76,16 @@ def main(config_path="configs/config.yaml"):
     print(f"Mejor checkpoint cargado: {best_path}")
 
     # =========================
-    # 1) Evaluación sin ajustar threshold
+    # TEST CON UMBRAL FIJO
     # =========================
-    print("\n=== TEST SIN AJUSTAR THRESHOLD ===")
+    print("\n=== TEST CON UMBRAL FIJO (0.5) ===")
     model_manager.threshold = 0.5
-    test_results_fixed = trainer.test(model_manager, datamodule=image_manager)
-
-    fixed_save_path = os.path.join(model_path, "model_threshold_fixed.pt")
-    save_model_with_threshold(
-        model_manager,
-        fixed_save_path,
-        threshold=model_manager.threshold,
-        extra_metrics={"test_results": test_results_fixed}
-    )
-    print(f"Modelo con threshold fijo guardado en: {fixed_save_path}")
+    trainer.test(model_manager, datamodule=image_manager)
 
     # =========================
-    # 2) Evaluación con threshold ajustado
+    # AJUSTE DE UMBRAL + TEST
     # =========================
-    print("\n=== AJUSTE DE THRESHOLD EN VALIDACIÓN ===")
+    print("\n=== AJUSTE DE UMBRAL EN VALIDACIÓN ===")
     best_metrics = model_manager.tune_threshold(
         image_manager.val_dataloader(),
         mode="precision_at_recall",
@@ -115,22 +93,10 @@ def main(config_path="configs/config.yaml"):
     )
 
     print(f"Threshold ajustado: {model_manager.threshold}")
-    print(f"Métricas de validación con threshold ajustado: {best_metrics}")
+    print(f"Métricas de validación: {best_metrics}")
 
-    print("\n=== TEST CON THRESHOLD AJUSTADO ===")
-    test_results_tuned = trainer.test(model_manager, datamodule=image_manager)
-
-    tuned_save_path = os.path.join(model_path, "model_threshold_tuned.pt")
-    save_model_with_threshold(
-        model_manager,
-        tuned_save_path,
-        threshold=model_manager.threshold,
-        extra_metrics={
-            "val_threshold_metrics": best_metrics,
-            "test_results": test_results_tuned
-        }
-    )
-    print(f"Modelo con threshold ajustado guardado en: {tuned_save_path}")
+    print("\n=== TEST CON UMBRAL AJUSTADO ===")
+    trainer.test(model_manager, datamodule=image_manager)
 
 
 def get_model(model_name: str, batch_size, num_workers, num_classes=2):

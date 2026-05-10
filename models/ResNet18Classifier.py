@@ -19,9 +19,6 @@ class ResNet18Classifier(Model):
         for param in self.model.layer4.parameters():
             param.requires_grad = True
 
-        # Si quieres afinar un poco más, puedes descomentar también esto:
-        # for param in self.model.layer3.parameters():
-        #     param.requires_grad = True
 
         in_features = self.model.fc.in_features
         self.model.fc = nn.Sequential(

@@ -118,18 +118,6 @@ class Classifier(L.LightningModule):
 
     @torch.no_grad()
     def tune_threshold(self, dataloader, mode="f1", min_recall=0.70):
-        """
-        Ajusta el umbral usando validación.
-
-        mode:
-          - 'f1': maximiza F1
-          - 'precision_at_recall': maximiza precisión con recall >= min_recall
-
-        Además:
-          - imprime el threshold escogido
-          - imprime las métricas de validación con ese threshold
-          - intenta registrarlas en el logger de Lightning si existe
-        """
         self.eval()
 
         all_probs = []

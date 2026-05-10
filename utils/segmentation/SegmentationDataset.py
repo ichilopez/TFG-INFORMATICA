@@ -42,14 +42,14 @@ class SegmentationDataset(Dataset):
         image_pil = Image.open(img_path).convert("RGB")
         mask_pil = Image.open(mask_path).convert("L")
 
-        # Asegurar mismo tamaño antes de Albumentations
+        # Asegura mismo tamaño antes de Albumentations
         if image_pil.size != mask_pil.size:
             mask_pil = mask_pil.resize(image_pil.size, Image.NEAREST)
 
         image = np.array(image_pil)
         mask = np.array(mask_pil)
 
-        # Binarizar máscara
+        # Binariza máscara
         mask = (mask > 127).astype(np.uint8)
 
         augmented = self.transform(image=image, mask=mask)

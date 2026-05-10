@@ -9,16 +9,12 @@ import lightning as L
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from utils.classification.ClassificationDataSet import ClassificationDataSet
 
 
 class ApplyCLAHE(object):
-    """
-    Aplica CLAHE para resaltar texturas y bordes dentro del recorte de la lesión.
-    Muy útil para distinguir masas en tejidos densos.
-    """
+
     def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):
         self.clip_limit = clip_limit
         self.tile_grid_size = tile_grid_size
@@ -132,15 +128,7 @@ class ClassificationImageManager(L.LightningDataModule):
         class_names=("BENIGN", "MALIGNANT"),
         normalize=None
     ):
-        """
-        Dibuja la matriz de confusión sobre el conjunto de test.
-
-        normalize:
-          - None: conteos brutos
-          - "true": normaliza por filas
-          - "pred": normaliza por columnas
-          - "all": normaliza globalmente
-        """
+        
         self.setup(stage="test")
         test_loader = self.test_dataloader()
 

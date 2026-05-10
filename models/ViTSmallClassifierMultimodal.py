@@ -16,15 +16,15 @@ class ViTSmallClassifierMultimodal(Model):
 
         in_features = self.backbone.num_features
 
-        # Congelar todo
+        # Congelamos todo
         for param in self.backbone.parameters():
             param.requires_grad = False
 
-        # Descongelar los últimos bloques transformer
+        # Descongelamos los últimos bloques transformer
         for param in self.backbone.blocks[-2:].parameters():
             param.requires_grad = True
 
-        # Descongelar también la normalización final
+        # Descongelamos también la normalización final
         for param in self.backbone.norm.parameters():
             param.requires_grad = True
 

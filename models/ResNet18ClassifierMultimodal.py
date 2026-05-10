@@ -23,7 +23,7 @@ class ResNet18ClassifierMultimodal(Model):
         for param in self.backbone[-1].parameters():
             param.requires_grad = True
 
-        # Si quieres afinar más, puedes abrir también layer3
+        # para afinar más
         # for param in self.backbone[-2].parameters():
         #     param.requires_grad = True
 
