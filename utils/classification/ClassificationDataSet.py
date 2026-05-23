@@ -3,21 +3,26 @@ from PIL import Image
 import os
 import torch
 
+
 class ClassificationDataSet(Dataset):
     def __init__(self, path, transform=None):
         self.path = path
         self.transform = transform
 
+        # Lista las carpetas de estudios disponibles
         all_folders = sorted([
             f for f in os.listdir(path)
             if os.path.isdir(os.path.join(path, f))
         ])
+
+        # Limita el número de muestras usadas
         self.image_folders = all_folders[:916]
 
     def __len__(self):
         return len(self.image_folders)
 
     def _read_file(self, file_path):
+        # Comprueba que el fichero existe y no está vacío
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"No existe el fichero: {file_path}")
 
@@ -37,12 +42,13 @@ class ClassificationDataSet(Dataset):
         density_path = os.path.join(img_folder, "breast_density.txt")
         view_path = os.path.join(img_folder, "image_view.txt")
 
+        # Carga la imagen en escala de grises
         img = Image.open(img_path).convert("L")
 
         if self.transform is not None:
             img = self.transform(img)
 
-        # Label
+        # Convierte la etiqueta textual a clase numérica
         pathology = self._read_file(label_path).upper()
         if pathology == "BENIGN":
             label = 0
@@ -51,7 +57,7 @@ class ClassificationDataSet(Dataset):
         else:
             raise ValueError(f"Etiqueta desconocida en {label_path}: {pathology}")
 
-        # Metadata
+        # Lee los metadatos asociados a la imagen
         density_str = self._read_file(density_path)
         view_str = self._read_file(view_path)
 
@@ -65,12 +71,14 @@ class ClassificationDataSet(Dataset):
         except Exception:
             raise ValueError(f"image_view inválido en {view_path}: '{view_str}'")
 
+        # Valida que los metadatos estén dentro del rango esperado
         if density not in [0, 1, 2, 3]:
             raise ValueError(f"breast_density fuera de rango en {density_path}: {density}")
 
         if view not in [0, 1]:
             raise ValueError(f"image_view fuera de rango en {view_path}: {view}")
 
+        # Devuelve imagen, metadatos y etiqueta en formato tensor
         meta = torch.tensor([density, view], dtype=torch.long)
         label = torch.tensor(label, dtype=torch.long)
 

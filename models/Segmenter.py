@@ -22,12 +22,15 @@ class Segmenter(L.LightningModule):
         self.bce_weight = bce_weight
         self.dice_weight = dice_weight
 
+        # Combina BCE y Dice Loss para optimizar píxel a píxel y solapamiento
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.dice_loss = smp.losses.DiceLoss(mode="binary", from_logits=True)
 
+        # Métricas de validación
         self.val_iou = torchmetrics.JaccardIndex(task="binary")
         self.val_dice = torchmetrics.F1Score(task="binary")
 
+        # Métricas de test
         self.test_iou = torchmetrics.JaccardIndex(task="binary")
         self.test_dice = torchmetrics.F1Score(task="binary")
 
@@ -40,6 +43,7 @@ class Segmenter(L.LightningModule):
 
         logits = self(imgs)
 
+        # Ajusta el tamaño de salida si no coincide con la máscara
         if logits.shape[2:] != masks.shape[2:]:
             logits = F.interpolate(
                 logits,
@@ -52,6 +56,7 @@ class Segmenter(L.LightningModule):
         dice = self.dice_loss(logits, masks)
         loss = self.bce_weight * bce + self.dice_weight * dice
 
+        # Convierte logits en máscara binaria
         probs = torch.sigmoid(logits)
         preds = (probs > self.threshold).int()
         targets = masks.int()
@@ -94,6 +99,7 @@ class Segmenter(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
+        # Reduce el learning rate si no mejora el Dice de validación
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="max",

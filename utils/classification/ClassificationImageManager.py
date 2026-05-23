@@ -9,6 +9,7 @@ import lightning as L
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from utils.classification.ClassificationDataSet import ClassificationDataSet
 
@@ -20,6 +21,7 @@ class ApplyCLAHE(object):
         self.tile_grid_size = tile_grid_size
 
     def __call__(self, img):
+        # Aplica CLAHE para mejorar el contraste local
         img_np = np.array(img)
         clahe = cv2.createCLAHE(
             clipLimit=self.clip_limit,
@@ -34,6 +36,7 @@ class ClassificationImageManager(L.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
 
+        # Carga las rutas y parámetros desde el YAML
         with open("configs/config.yaml", "r") as f:
             self.cfg = yaml.safe_load(f)
 
@@ -49,10 +52,11 @@ class ClassificationImageManager(L.LightningDataModule):
     def setup(self, stage=None):
         image_size = 256
 
-        # Medias y desviaciones estándar de ImageNet
+        # Normalización compatible con modelos preentrenados en ImageNet
         mean = [0.485, 0.456, 0.406]
         std = [0.229, 0.224, 0.225]
 
+        # Transformaciones con aumento de datos para entrenamiento
         self.train_transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             ApplyCLAHE(clip_limit=2.0),
@@ -70,6 +74,7 @@ class ClassificationImageManager(L.LightningDataModule):
             transforms.Normalize(mean=mean, std=std)
         ])
 
+        # Transformaciones sin aumento para validación y test
         self.eval_transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             ApplyCLAHE(clip_limit=2.0),
@@ -128,10 +133,11 @@ class ClassificationImageManager(L.LightningDataModule):
         class_names=("BENIGN", "MALIGNANT"),
         normalize=None
     ):
-        
+
         self.setup(stage="test")
         test_loader = self.test_dataloader()
 
+        # Selecciona el dispositivo disponible
         device = (
             model_manager.device
             if hasattr(model_manager, "device")
@@ -144,8 +150,10 @@ class ClassificationImageManager(L.LightningDataModule):
         all_preds = []
         all_targets = []
 
+        # Usa el umbral del modelo si existe
         threshold = model_manager.threshold if hasattr(model_manager, "threshold") else 0.5
 
+        # Obtiene predicciones sobre el conjunto de test
         with torch.no_grad():
             for batch in test_loader:
                 x, meta, y = batch
@@ -161,6 +169,7 @@ class ClassificationImageManager(L.LightningDataModule):
                 all_preds.extend(preds.cpu().numpy())
                 all_targets.extend(y.cpu().numpy())
 
+        # Calcula la matriz de confusión
         cm = confusion_matrix(all_targets, all_preds, normalize=normalize)
 
         fig, ax = plt.subplots(figsize=(6, 6))
@@ -168,15 +177,18 @@ class ClassificationImageManager(L.LightningDataModule):
             confusion_matrix=cm,
             display_labels=class_names
         )
+
         disp.plot(
             ax=ax,
             cmap="Blues",
             values_format=".2f" if normalize is not None else "d",
             colorbar=False
         )
+
         ax.set_title(f"Matriz de confusión (threshold={threshold:.2f})")
         plt.tight_layout()
 
+        # Guarda la figura si se indica una ruta
         if save_path is not None:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path, dpi=300, bbox_inches="tight")

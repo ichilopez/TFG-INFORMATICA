@@ -3,23 +3,25 @@ from torchvision import models
 import torch
 import torch.nn as nn
 
+
 class MobileNetV2Classifier(Model):
     def __init__(self, num_classes=2):
         super().__init__()
 
-        # Backbone
+        # Backbone preentrenado
         base_model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
         self.features = base_model.features
 
-        # Congelar casi todo y descongelar últimos bloques
+        # Congela el extractor de características
         for param in self.features.parameters():
             param.requires_grad = False
 
+        # Ajuste fino de los últimos bloques
         for i in range(16, len(self.features)):
             for param in self.features[i].parameters():
                 param.requires_grad = True
 
-        # Bloque de Atención SE
+        # Bloque de atención SE
         in_channels = 1280
         self.attention = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
@@ -29,7 +31,7 @@ class MobileNetV2Classifier(Model):
             nn.Sigmoid()
         )
 
-        # Clasificador unimodal
+        # Clasificador final
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
@@ -42,9 +44,10 @@ class MobileNetV2Classifier(Model):
         )
 
     def forward(self, x, meta=None):
-        # meta se ignora en el modelo unimodal
+        # Modelo unimodal: no usa metadatos
         x = self.features(x)
 
+        # Repondera los canales más relevantes
         attention = self.attention(x)
         x = x * attention
 

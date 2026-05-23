@@ -15,6 +15,7 @@ class SegmentationImageManager(L.LightningDataModule):
 
         self.save_hyperparameters()
 
+        # Carga la ruta principal desde el YAML
         with open("configs/config.yaml", "r") as f:
             self.cfg = yaml.safe_load(f)
 
@@ -28,6 +29,7 @@ class SegmentationImageManager(L.LightningDataModule):
         pass
 
     def setup(self, stage=None):
+        # Transformaciones con aumento de datos para entrenamiento
         self.train_transform = A.Compose([
             A.Resize(height=self.image_size[0], width=self.image_size[1]),
             A.HorizontalFlip(p=0.5),
@@ -54,6 +56,7 @@ class SegmentationImageManager(L.LightningDataModule):
             ToTensorV2()
         ])
 
+        # Transformaciones sin aumento para validación y test
         self.eval_transform = A.Compose([
             A.Resize(height=self.image_size[0], width=self.image_size[1]),
             A.Normalize(
@@ -63,6 +66,7 @@ class SegmentationImageManager(L.LightningDataModule):
             ToTensorV2()
         ])
 
+        # Crea los datasets de cada partición
         self.train_dataset = SegmentationDataset(
             images_path=os.path.join(self.main_path, "train"),
             transform=self.train_transform,

@@ -3,10 +3,12 @@ import torch
 import torch.nn as nn
 from models.Model import Model
 
+
 class ViTSmallClassifier(Model):
     def __init__(self, num_classes=2):
         super().__init__()
 
+        # Vision Transformer preentrenado
         self.model = timm.create_model(
             'vit_small_patch16_224',
             pretrained=True,
@@ -14,18 +16,19 @@ class ViTSmallClassifier(Model):
             img_size=256
         )
 
-        # Congelar todo
+        # Congela todos los parámetros
         for param in self.model.parameters():
             param.requires_grad = False
 
-        # Descongelar los últimos bloques transformer
+        # Ajuste fino de los últimos bloques transformer
         for param in self.model.blocks[-2:].parameters():
             param.requires_grad = True
 
-        # Descongelar también la normalización final
+        # También se entrena la normalización final
         for param in self.model.norm.parameters():
             param.requires_grad = True
 
+        # Sustituye la cabeza de clasificación
         in_features = self.model.head.in_features
         self.model.head = nn.Sequential(
             nn.Dropout(0.4),
@@ -37,7 +40,7 @@ class ViTSmallClassifier(Model):
         )
 
     def forward(self, x, meta=None):
-        # meta se ignora en el modelo unimodal
+        # Modelo unimodal: no usa metadatos
         return self.model(x)
 
     def getModel(self):

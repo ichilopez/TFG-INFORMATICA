@@ -7,6 +7,7 @@ class EnsembleClassifier:
         self.threshold = threshold
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Si no se indican pesos, todos los modelos aportan lo mismo
         if weights is None:
             self.weights = [1.0 / len(models)] * len(models)
         else:
@@ -15,6 +16,7 @@ class EnsembleClassifier:
             s = sum(weights)
             self.weights = [w / s for w in weights]
 
+        # Los modelos se pasan al dispositivo y se dejan en modo evaluación
         for model in self.models:
             model.to(self.device)
             model.eval()
@@ -23,12 +25,15 @@ class EnsembleClassifier:
     def predict_proba(self, x, meta):
         probs = []
 
+        # Obtiene la probabilidad de clase positiva de cada modelo
         for model in self.models:
             logits = model(x, meta)
             p = torch.softmax(logits, dim=1)[:, 1]
             probs.append(p)
 
         probs = torch.stack(probs, dim=0)  # [n_models, batch]
+
+        # Media ponderada de las probabilidades
         weights = torch.tensor(self.weights, device=probs.device).unsqueeze(1)
         ensemble_probs = (probs * weights).sum(dim=0)
 
@@ -36,8 +41,10 @@ class EnsembleClassifier:
 
     @torch.no_grad()
     def predict(self, x, meta, threshold=None):
+        # Usa el umbral del ensemble salvo que se indique otro
         thr = self.threshold if threshold is None else threshold
         probs = self.predict_proba(x, meta)
+
         return (probs >= thr).long()
 
     @torch.no_grad()
@@ -45,6 +52,7 @@ class EnsembleClassifier:
         all_probs = []
         all_targets = []
 
+        # Calcula probabilidades del ensemble sobre validación
         for x, meta, y in dataloader:
             x = x.to(self.device)
             meta = meta.to(self.device)
@@ -58,6 +66,7 @@ class EnsembleClassifier:
         all_probs = torch.cat(all_probs)
         all_targets = torch.cat(all_targets)
 
+        # Umbrales candidatos
         thresholds = torch.arange(0.05, 0.96, 0.01)
 
         best_metrics = None
@@ -85,6 +94,7 @@ class EnsembleClassifier:
             }
 
             if mode == "f1":
+                # Selecciona el umbral con mayor F1
                 if (
                     best_metrics is None
                     or current["f1"] > best_metrics["f1"] + eps
@@ -96,9 +106,11 @@ class EnsembleClassifier:
                     best_metrics = current
 
             elif mode == "precision_at_recall":
+                # Descarta umbrales que no alcancen el recall mínimo
                 if recall < min_recall:
                     continue
 
+                # Prioriza precisión, después F1 y después mayor umbral
                 if (
                     best_metrics is None
                     or current["precision"] > best_metrics["precision"] + eps
@@ -119,6 +131,7 @@ class EnsembleClassifier:
         if best_metrics is None:
             raise RuntimeError("No se pudo ajustar threshold")
 
+        # Actualiza el umbral del ensemble
         self.threshold = best_metrics["threshold"]
 
         print(

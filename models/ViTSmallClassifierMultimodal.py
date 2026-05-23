@@ -3,11 +3,12 @@ import torch
 import torch.nn as nn
 from models.Model import Model
 
+
 class ViTSmallClassifierMultimodal(Model):
     def __init__(self, num_classes=2, density_vocab_size=4, view_vocab_size=2):
         super().__init__()
 
-        # Backbone ViT sin cabeza final
+        # Backbone ViT sin cabeza de clasificación
         self.backbone = timm.create_model(
             'vit_small_patch16_224',
             pretrained=True,
@@ -16,25 +17,23 @@ class ViTSmallClassifierMultimodal(Model):
 
         in_features = self.backbone.num_features
 
-        # Congelamos todo
+        # Congela el backbone completo
         for param in self.backbone.parameters():
             param.requires_grad = False
 
-        # Descongelamos los últimos bloques transformer
+        # Ajuste fino de los últimos bloques transformer
         for param in self.backbone.blocks[-2:].parameters():
             param.requires_grad = True
 
-        # Descongelamos también la normalización final
+        # También se entrena la normalización final
         for param in self.backbone.norm.parameters():
             param.requires_grad = True
 
-        # Embeddings para metadatos
-        # breast_density -> índices 0..3
-        # image_view -> índices 0..1
+        # Embeddings para variables categóricas
         self.density_emb = nn.Embedding(density_vocab_size, 8)
         self.view_emb = nn.Embedding(view_vocab_size, 4)
 
-        # Rama metadata
+        # Rama de metadatos
         self.meta_head = nn.Sequential(
             nn.Linear(8 + 4, 16),
             nn.BatchNorm1d(16),
@@ -51,7 +50,7 @@ class ViTSmallClassifierMultimodal(Model):
             nn.Dropout(0.3)
         )
 
-        # Clasificador final tras fusión
+        # Clasificador tras fusionar imagen y metadatos
         self.classifier = nn.Sequential(
             nn.Linear(256 + 16, 128),
             nn.BatchNorm1d(128),
@@ -64,22 +63,22 @@ class ViTSmallClassifierMultimodal(Model):
         # Rama visual
         x = self.backbone.forward_features(x)
 
-        # Según la versión de timm, puede devolver [B, C] o [B, N, C]
+        # Extrae el token CLS si timm devuelve la secuencia completa
         if x.ndim == 3:
-            x = x[:, 0]  # token CLS
+            x = x[:, 0]
 
         x = self.image_head(x)
 
-        # Este modelo sí requiere meta
+        # La versión multimodal necesita metadatos
         if meta is None:
             raise ValueError(
                 "ViTSmallClassifierMultimodal requiere meta con "
                 "[breast_density, image_view]."
             )
 
-        # Rama metadata
-        density = meta[:, 0]   # valores 0..3
-        view = meta[:, 1]      # valores 0..1
+        # Rama de metadatos
+        density = meta[:, 0]
+        view = meta[:, 1]
 
         density_feat = self.density_emb(density)
         view_feat = self.view_emb(view)
@@ -87,10 +86,9 @@ class ViTSmallClassifierMultimodal(Model):
         meta_feat = torch.cat([density_feat, view_feat], dim=1)
         meta_feat = self.meta_head(meta_feat)
 
-        # Fusión
+        # Fusión de ambas ramas
         fused = torch.cat([x, meta_feat], dim=1)
 
-        # Clasificación final
         out = self.classifier(fused)
         return out
 

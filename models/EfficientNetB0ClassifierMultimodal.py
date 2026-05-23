@@ -3,19 +3,21 @@ import torch.nn as nn
 from torchvision import models
 from models.Model import Model
 
+
 class EfficientNetB0ClassifierMultimodal(Model):
     def __init__(self, num_classes=2, density_vocab_size=4, view_vocab_size=2):
         super().__init__()
 
+        # Backbone preentrenado en ImageNet
         backbone = models.efficientnet_b0(
             weights=models.EfficientNet_B0_Weights.DEFAULT
         )
 
-        # Congelamos casi todo
+        # Congela la mayor parte del modelo
         for p in backbone.parameters():
             p.requires_grad = False
 
-        # Descongelamos últimos bloques
+        # Ajuste fino de los últimos bloques
         for p in backbone.features[-2:].parameters():
             p.requires_grad = True
 
@@ -24,12 +26,11 @@ class EfficientNetB0ClassifierMultimodal(Model):
 
         img_dim = backbone.classifier[1].in_features  # 1280
 
-        # Embeddings para metadatos
-        # breast_density: 4 categorías -> índices 0..3
-        # image_view: 2 categorías -> índices 0..1
+        # Embeddings para variables categóricas
         self.density_emb = nn.Embedding(density_vocab_size, 8)
         self.view_emb = nn.Embedding(view_vocab_size, 8)
 
+        # Rama que procesa los metadatos
         self.meta_mlp = nn.Sequential(
             nn.Linear(16, 32),
             nn.BatchNorm1d(32),
@@ -37,6 +38,7 @@ class EfficientNetB0ClassifierMultimodal(Model):
             nn.Dropout(0.2)
         )
 
+        # Clasificador final tras fusionar imagen y metadatos
         self.classifier = nn.Sequential(
             nn.Linear(img_dim + 32, 256),
             nn.BatchNorm1d(256),
@@ -46,19 +48,19 @@ class EfficientNetB0ClassifierMultimodal(Model):
         )
 
     def forward(self, x, meta=None):
-        # Rama imagen
+        # Rama de imagen
         x = self.features(x)
         x = self.pool(x)
         x = torch.flatten(x, 1)
 
-        # Este modelo sí requiere meta
+        # La versión multimodal necesita metadatos
         if meta is None:
             raise ValueError(
                 "EfficientNetB0ClassifierMultimodal requiere meta con "
                 "[breast_density, image_view]."
             )
 
-        # Rama metadata
+        # Rama de metadatos
         density = meta[:, 0]
         view = meta[:, 1]
 
@@ -68,9 +70,10 @@ class EfficientNetB0ClassifierMultimodal(Model):
         meta_feat = torch.cat([density_feat, view_feat], dim=1)
         meta_feat = self.meta_mlp(meta_feat)
 
-        # Fusión
+        # Fusión de ambas ramas
         fused = torch.cat([x, meta_feat], dim=1)
         logits = self.classifier(fused)
+
         return logits
 
     def getModel(self):

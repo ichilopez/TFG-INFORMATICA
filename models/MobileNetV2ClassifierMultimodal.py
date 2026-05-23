@@ -3,23 +3,25 @@ from torchvision import models
 import torch
 import torch.nn as nn
 
+
 class MobileNetV2ClassifierMultimodal(Model):
     def __init__(self, num_classes=2, density_vocab_size=4, view_vocab_size=2):
         super().__init__()
 
-        # Backbone
+        # Backbone preentrenado
         base_model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
         self.features = base_model.features
 
-        # Congelar casi todo y descongelar últimos bloques
+        # Congela el extractor de características
         for param in self.features.parameters():
             param.requires_grad = False
 
+        # Ajuste fino de los últimos bloques
         for i in range(16, len(self.features)):
             for param in self.features[i].parameters():
                 param.requires_grad = True
 
-        # Atención SE
+        # Bloque de atención SE
         in_channels = 1280
         self.attention = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
@@ -29,19 +31,17 @@ class MobileNetV2ClassifierMultimodal(Model):
             nn.Sigmoid()
         )
 
-        # Pooling rama visual
+        # Pooling de la rama visual
         self.pool = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten()
         )
 
-        # Embeddings para metadatos
-        # breast_density: índices 0..3
-        # image_view: índices 0..1
+        # Embeddings para variables categóricas
         self.density_emb = nn.Embedding(density_vocab_size, 8)
         self.view_emb = nn.Embedding(view_vocab_size, 4)
 
-        # Rama metadata
+        # Rama de metadatos
         self.meta_head = nn.Sequential(
             nn.Linear(8 + 4, 16),
             nn.BatchNorm1d(16),
@@ -58,7 +58,7 @@ class MobileNetV2ClassifierMultimodal(Model):
             nn.Dropout(0.3)
         )
 
-        # Clasificador final tras fusión
+        # Clasificador tras fusionar imagen y metadatos
         self.classifier = nn.Sequential(
             nn.Linear(256 + 16, 128),
             nn.BatchNorm1d(128),
@@ -68,23 +68,23 @@ class MobileNetV2ClassifierMultimodal(Model):
         )
 
     def forward(self, x, meta=None):
-        # Rama visual
+        # Rama visual con atención
         x = self.features(x)
         attention = self.attention(x)
         x = x * attention
         x = self.pool(x)
         x = self.image_head(x)
 
-        # Este modelo sí requiere meta
+        # La versión multimodal necesita metadatos
         if meta is None:
             raise ValueError(
                 "MobileNetV2ClassifierMultimodal requiere meta con "
                 "[breast_density, image_view]."
             )
 
-        # Rama metadata
-        density = meta[:, 0]   # valores 0..3
-        view = meta[:, 1]      # valores 0..1
+        # Rama de metadatos
+        density = meta[:, 0]
+        view = meta[:, 1]
 
         density_feat = self.density_emb(density)
         view_feat = self.view_emb(view)
@@ -92,10 +92,9 @@ class MobileNetV2ClassifierMultimodal(Model):
         meta_feat = torch.cat([density_feat, view_feat], dim=1)
         meta_feat = self.meta_head(meta_feat)
 
-        # Fusión
+        # Fusión de ambas ramas
         fused = torch.cat([x, meta_feat], dim=1)
 
-        # Clasificación final
         out = self.classifier(fused)
         return out
 

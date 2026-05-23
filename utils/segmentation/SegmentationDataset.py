@@ -13,13 +13,16 @@ class SegmentationDataset(Dataset):
         self.transform = transform
         self.image_size = image_size
 
+        # Lista las carpetas de estudios disponibles
         self.image_files = sorted([
             f for f in os.listdir(images_path)
             if os.path.isdir(os.path.join(images_path, f))
         ])
+
+        # Limita el número de muestras usadas
         self.image_files = self.image_files[:916]
 
-
+        # Transformaciones por defecto si no se proporciona ninguna
         if self.transform is None:
             self.transform = A.Compose([
                 A.Resize(height=image_size[0], width=image_size[1]),
@@ -39,19 +42,21 @@ class SegmentationDataset(Dataset):
         img_path = os.path.join(self.images_path, img_folder, "0.jpeg")
         mask_path = os.path.join(self.images_path, img_folder, "2.jpeg")
 
+        # Carga imagen y máscara
         image_pil = Image.open(img_path).convert("RGB")
         mask_pil = Image.open(mask_path).convert("L")
 
-        # Asegura mismo tamaño antes de Albumentations
+        # Asegura que imagen y máscara tengan el mismo tamaño
         if image_pil.size != mask_pil.size:
             mask_pil = mask_pil.resize(image_pil.size, Image.NEAREST)
 
         image = np.array(image_pil)
         mask = np.array(mask_pil)
 
-        # Binariza máscara
+        # Convierte la máscara a binaria
         mask = (mask > 127).astype(np.uint8)
 
+        # Aplica las mismas transformaciones a imagen y máscara
         augmented = self.transform(image=image, mask=mask)
         image = augmented["image"]
         mask = augmented["mask"]
@@ -59,6 +64,7 @@ class SegmentationDataset(Dataset):
         if not torch.is_tensor(mask):
             mask = torch.from_numpy(mask)
 
+        # Añade canal a la máscara si es necesario
         if mask.ndim == 2:
             mask = mask.unsqueeze(0)
 

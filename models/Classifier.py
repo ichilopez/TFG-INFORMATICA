@@ -19,6 +19,7 @@ class Classifier(L.LightningModule):
         self.threshold = threshold
         self.prepare_data_per_node = False
 
+        # Pérdida ponderada para compensar el desbalance entre clases
         self.loss_fn = nn.CrossEntropyLoss(
             weight=torch.tensor(class_weights, dtype=torch.float),
             label_smoothing=label_smoothing
@@ -37,14 +38,14 @@ class Classifier(L.LightningModule):
         self.test_recall = torchmetrics.Recall(task="binary")
         self.test_f1 = torchmetrics.F1Score(task="binary")
 
-        # Para guardar métricas del threshold ajustado
+        # Guarda las métricas obtenidas con el umbral ajustado
         self.tuned_val_metrics = None
 
     def forward(self, x, meta=None):
         return self.model(x, meta)
 
     def _unpack_batch(self, batch):
-        # Pipeline unificado: siempre esperamos x, meta, y
+        # Formato común para modelos unimodales y multimodales
         x, meta, y = batch
         return x, meta, y
 
@@ -54,6 +55,7 @@ class Classifier(L.LightningModule):
         logits = self(x, meta)
         loss = self.loss_fn(logits, y)
 
+        # Probabilidad de la clase positiva
         probs = torch.softmax(logits, dim=1)[:, 1]
         preds = (probs >= self.threshold).long()
 
@@ -93,6 +95,7 @@ class Classifier(L.LightningModule):
         self.log("test_f1", self.test_f1(preds, y), prog_bar=True)
 
     def configure_optimizers(self):
+        # Solo se optimizan los parámetros entrenables
         trainable_params = [p for p in self.parameters() if p.requires_grad]
 
         optimizer = torch.optim.AdamW(
@@ -101,6 +104,7 @@ class Classifier(L.LightningModule):
             weight_decay=0.05
         )
 
+        # Reduce el learning rate si val_loss deja de mejorar
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -123,6 +127,7 @@ class Classifier(L.LightningModule):
         all_probs = []
         all_targets = []
 
+        # Se obtienen las probabilidades sobre validación
         for batch in dataloader:
             x, meta, y = self._unpack_batch(batch)
 
@@ -139,6 +144,7 @@ class Classifier(L.LightningModule):
         all_probs = torch.cat(all_probs)
         all_targets = torch.cat(all_targets)
 
+        # Rango de umbrales candidatos
         thresholds = torch.arange(0.05, 0.96, 0.01)
 
         best_metrics = None
@@ -166,6 +172,7 @@ class Classifier(L.LightningModule):
             }
 
             if mode == "f1":
+                # Selecciona el umbral con mejor F1
                 if (
                     best_metrics is None
                     or current["f1"] > best_metrics["f1"] + eps
@@ -177,9 +184,11 @@ class Classifier(L.LightningModule):
                     best_metrics = current
 
             elif mode == "precision_at_recall":
+                # Solo considera umbrales que mantengan el recall mínimo
                 if recall < min_recall:
                     continue
 
+                # Entre ellos, prioriza precisión, luego F1 y luego mayor umbral
                 if (
                     best_metrics is None
                     or current["precision"] > best_metrics["precision"] + eps
@@ -202,6 +211,7 @@ class Classifier(L.LightningModule):
                 f"Ningún threshold alcanzó recall >= {min_recall:.2f}"
             )
 
+        # Se actualiza el umbral del modelo
         self.threshold = best_metrics["threshold"]
         self.tuned_val_metrics = {
             "mode": mode,
@@ -221,6 +231,7 @@ class Classifier(L.LightningModule):
             f"val_f1={best_metrics['f1']:.4f}"
         )
 
+        # Registra también las métricas del umbral ajustado
         if self.logger is not None:
             try:
                 self.logger.log_metrics(
